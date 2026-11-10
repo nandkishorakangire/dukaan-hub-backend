@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  buyer
+  seller
+  admin
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum PaymentMode {
+  internal
+  external
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum PaymentProvider {
+  mock
+  upi
+  card
+  netbanking
+  wallet
+  cod
+  vendor_qr
+}
+
+enum AdPlacement {
+  home
+  business
+  search
+  carousel
+}
+
+enum ChatSender {
+  buyer
+  seller
+}
+
+enum CouponType {
+  percent
+  flat
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  email         String   @unique
+  phone         String?  @unique
+  password_hash String
+  role          Role     @default(buyer)
+  avatar_url    String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  businesses     Business[]
+  orders         Order[]        @relation("BuyerOrders")
+  chat_messages  ChatMessage[]
+  refresh_tokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @unique
+  expires_at DateTime
+  revoked_at DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("refresh_tokens")
+}
+
+model Business {
+  id                        String   @id @default(uuid()) @db.Uuid
+  owner_id                  String   @db.Uuid
+  name                      String
+  slug                      String   @unique
+  description               String?
+  logo_url                  String?
+  banner_url                String?
+  images                    String[] @default([])
+  amenities                 String[] @default([])
+  category                  String?
+  address                   String?
+  phone                     String?
+  email                     String?
+  timings                   Json?
+  rating                    Decimal  @default(0) @db.Decimal(3, 2)
+  ratings_count             Int      @default(0)
+  trend_score               Int      @default(0)
+  is_featured               Boolean  @default(false)
+  upi_id                    String?
+  payment_qr_url            String?
+  accepts_internal_payments Boolean  @default(true)
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  owner    User            @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  products Product[]
+  pages    BusinessPage[]
+  ads      Ad[]
+  orders   Order[]
+
+  @@index([owner_id])
+  @@index([category])
+  @@index([is_featured])
+  @@index([trend_score])
+  @@map("businesses")
+}
+
+model Category {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String   @unique
+  icon       String?
+  parent_id  String?  @db.Uuid
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+
+  parent   Category?  @relation("CategoryTree", fields: [parent_id], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parent_id])
+  @@map("categories")
+}
+
+model Product {
+  id               String   @id @default(uuid()) @db.Uuid
+  business_id      String   @db.Uuid
+  name             String
+  description      String?
+  price            Decimal  @db.Decimal(12, 2)
+  mrp              Decimal? @db.Decimal(12, 2)
+  weight           String?
+  discount_percent Int?
+  currency         String   @default("INR")
+  stock_quantity   Int      @default(0)
+  image_url        String?
+  image_width      Int?
+  image_height     Int?
+  image_bg_color   String?
+  category_id      String?  @db.Uuid
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  business   Business    @relation(fields: [business_id], references: [id], onDelete: Cascade)
+  category   Category?   @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  order_items OrderItem[]
+
+  @@index([business_id])
+  @@index([category_id])
+  @@index([is_active])
+  @@map("products")
+}
+
+model Order {
+  id               String        @id @default(uuid()) @db.Uuid
+  order_number     String        @unique
+  buyer_id         String        @db.Uuid
+  business_id      String        @db.Uuid
+  subtotal         Decimal       @db.Decimal(12, 2)
+  discount         Decimal       @default(0) @db.Decimal(12, 2)
+  delivery_fee     Decimal       @default(0) @db.Decimal(12, 2)
+  handling_fee     Decimal       @default(0) @db.Decimal(12, 2)
+  tip_amount       Decimal       @default(0) @db.Decimal(12, 2)
+  donation_amount  Decimal       @default(0) @db.Decimal(12, 2)
+  total            Decimal       @db.Decimal(12, 2)
+  currency         String        @default("INR")
+  coupon_code      String?
+  payment_mode     PaymentMode
+  payment_reference String?
+  payment_status   PaymentStatus @default(pending)
+  status           OrderStatus   @default(pending)
+  notes            String?
+  delivery_address Json?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  buyer    User       @relation("BuyerOrders", fields: [buyer_id], references: [id], onDelete: Cascade)
+  business Business   @relation(fields: [business_id], references: [id], onDelete: Restrict)
+  items    OrderItem[]
+  payments Payment[]
+  messages ChatMessage[]
+
+  @@index([buyer_id])
+  @@index([business_id])
+  @@index([status])
+  @@index([created_at])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid()) @db.Uuid
+  order_id   String  @db.Uuid
+  product_id String? @db.Uuid
+  name       String
+  price      Decimal @db.Decimal(12, 2)
+  quantity   Int
+  subtotal   Decimal @db.Decimal(12, 2)
+
+  order   Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [product_id], references: [id], onDelete: SetNull)
+
+  @@index([order_id])
+  @@index([product_id])
+  @@map("order_items")
+}
+
+model Payment {
+  id         String          @id @default(uuid()) @db.Uuid
+  order_id   String          @db.Uuid
+  provider   PaymentProvider
+  reference  String          @unique
+  amount     Decimal         @db.Decimal(12, 2)
+  currency   String          @default("INR")
+  status     PaymentStatus   @default(pending)
+  payload    Json?
+  created_at DateTime        @default(now())
+  updated_at DateTime        @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@map("payments")
+}
+
+model ChatMessage {
+  id           String     @id @default(uuid()) @db.Uuid
+  order_id     String     @db.Uuid
+  sender_id    String?    @db.Uuid
+  sender       ChatSender
+  text         String     @default("")
+  image        String?
+  image_width  Int?
+  image_height Int?
+  reply_to     Json?
+  mentions     String[]   @default([])
+  priority     Boolean    @default(false)
+  read_at      DateTime?
+  created_at   DateTime   @default(now())
+
+  order       Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  sender_user User? @relation(fields: [sender_id], references: [id], onDelete: SetNull)
+
+  @@index([order_id, created_at])
+  @@map("chat_messages")
+}
+
+model BusinessPage {
+  id           String   @id @default(uuid()) @db.Uuid
+  business_id  String   @db.Uuid
+  title        String
+  slug         String
+  content      String?
+  images       String[] @default([])
+  is_published Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  business Business @relation(fields: [business_id], references: [id], onDelete: Cascade)
+
+  @@unique([business_id, slug])
+  @@index([business_id])
+  @@map("business_pages")
+}
+
+model Ad {
+  id          String      @id @default(uuid()) @db.Uuid
+  business_id String?     @db.Uuid
+  title       String
+  image_url   String
+  link_url    String?
+  placement   AdPlacement
+  starts_at   DateTime?
+  ends_at     DateTime?
+  is_active   Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  business Business? @relation(fields: [business_id], references: [id], onDelete: Cascade)
+
+  @@index([placement, is_active])
+  @@index([business_id])
+  @@map("ads")
+}
+
+model Coupon {
+  id           String     @id @default(uuid()) @db.Uuid
+  code         String     @unique
+  title        String
+  description  String?
+  type         CouponType
+  value        Decimal    @db.Decimal(12, 2)
+  max_discount Decimal?   @db.Decimal(12, 2)
+  min_order    Decimal    @default(0) @db.Decimal(12, 2)
+  is_active    Boolean    @default(true)
+  starts_at    DateTime?
+  ends_at      DateTime?
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  @@map("coupons")
+}
