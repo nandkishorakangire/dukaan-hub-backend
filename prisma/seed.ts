@@ -79,6 +79,10 @@ const CATEGORIES: {
       { name: 'Rice & Grains', slug: 'rice-grains', icon: 'rice', sort_order: 1 },
       { name: 'Oils', slug: 'oils', icon: 'oil', sort_order: 2 },
       { name: 'Beverages', slug: 'beverages', icon: 'cup', sort_order: 3 },
+      { name: 'Dairy & Bakery', slug: 'dairy-bakery', icon: 'milk', sort_order: 4 },
+      { name: 'Snacks', slug: 'snacks', icon: 'chip', sort_order: 5 },
+      { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', icon: 'carrot', sort_order: 6 },
+      { name: 'Household', slug: 'household', icon: 'box', sort_order: 7 },
     ],
   },
   {
@@ -88,7 +92,10 @@ const CATEGORIES: {
     sort_order: 2,
     children: [
       { name: 'Ethnic Wear', slug: 'ethnic-wear', icon: 'dress', sort_order: 1 },
-      { name: 'Bags', slug: 'bags', icon: 'bag', sort_order: 2 },
+      { name: 'Western Wear', slug: 'western-wear', icon: 'tshirt', sort_order: 2 },
+      { name: 'Footwear', slug: 'footwear', icon: 'shoe', sort_order: 3 },
+      { name: 'Bags & Accessories', slug: 'bags-accessories', icon: 'bag', sort_order: 4 },
+      { name: 'Jewellery', slug: 'jewellery', icon: 'gem', sort_order: 5 },
     ],
   },
   {
@@ -99,6 +106,9 @@ const CATEGORIES: {
     children: [
       { name: 'Audio', slug: 'audio', icon: 'headphones', sort_order: 1 },
       { name: 'Accessories', slug: 'accessories', icon: 'cable', sort_order: 2 },
+      { name: 'Mobiles', slug: 'mobiles', icon: 'phone', sort_order: 3 },
+      { name: 'Computers', slug: 'computers', icon: 'laptop', sort_order: 4 },
+      { name: 'Home Appliances', slug: 'home-appliances', icon: 'plug', sort_order: 5 },
     ],
   },
   {
@@ -109,6 +119,9 @@ const CATEGORIES: {
     children: [
       { name: 'Cakes', slug: 'cakes', icon: 'cake', sort_order: 1 },
       { name: 'Bakery', slug: 'bakery', icon: 'bread', sort_order: 2 },
+      { name: 'Meals', slug: 'meals', icon: 'utensils', sort_order: 3 },
+      { name: 'Snacks', slug: 'snacks-food', icon: 'chip', sort_order: 4 },
+      { name: 'Beverages', slug: 'beverages-food', icon: 'cup', sort_order: 5 },
     ],
   },
   {
@@ -116,14 +129,62 @@ const CATEGORIES: {
     slug: 'home',
     icon: 'home',
     sort_order: 5,
-    children: [{ name: 'Decor', slug: 'decor', icon: 'lamp', sort_order: 1 }],
+    children: [
+      { name: 'Furniture', slug: 'furniture', icon: 'couch', sort_order: 1 },
+      { name: 'Decor', slug: 'decor', icon: 'lamp', sort_order: 2 },
+      { name: 'Kitchen', slug: 'kitchen', icon: 'pan', sort_order: 3 },
+      { name: 'Bedding', slug: 'bedding', icon: 'bed', sort_order: 4 },
+      { name: 'Lighting', slug: 'lighting', icon: 'lightbulb', sort_order: 5 },
+    ],
   },
   {
     name: 'Health',
     slug: 'health',
     icon: 'heart',
     sort_order: 6,
-    children: [{ name: 'Protein', slug: 'protein', icon: 'dumbbell', sort_order: 1 }],
+    children: [
+      { name: 'Protein', slug: 'protein', icon: 'dumbbell', sort_order: 1 },
+      { name: 'Medicines', slug: 'medicines', icon: 'pill', sort_order: 2 },
+      { name: 'Wellness', slug: 'wellness', icon: 'leaf', sort_order: 3 },
+      { name: 'Personal Care', slug: 'personal-care', icon: 'brush', sort_order: 4 },
+      { name: 'Fitness', slug: 'fitness', icon: 'barbell', sort_order: 5 },
+    ],
+  },
+  {
+    name: 'Beauty',
+    slug: 'beauty',
+    icon: 'lipstick',
+    sort_order: 7,
+    children: [
+      { name: 'Skincare', slug: 'skincare', icon: 'face', sort_order: 1 },
+      { name: 'Makeup', slug: 'makeup', icon: 'palette', sort_order: 2 },
+      { name: 'Haircare', slug: 'haircare', icon: 'hair', sort_order: 3 },
+      { name: 'Fragrances', slug: 'fragrances', icon: 'spray', sort_order: 4 },
+    ],
+  },
+  {
+    name: 'Stationery',
+    slug: 'stationery',
+    icon: 'notebook',
+    sort_order: 8,
+    children: [
+      { name: 'Notebooks', slug: 'notebooks', icon: 'notebook', sort_order: 1 },
+      { name: 'Pens & Pencils', slug: 'pens-pencils', icon: 'pen', sort_order: 2 },
+      { name: 'Office Supplies', slug: 'office-supplies', icon: 'folder', sort_order: 3 },
+      { name: 'Art Supplies', slug: 'art-supplies', icon: 'palette', sort_order: 4 },
+    ],
+  },
+  {
+    name: 'Services',
+    slug: 'services',
+    icon: 'tools',
+    sort_order: 9,
+    children: [
+      { name: 'Repairs', slug: 'repairs', icon: 'wrench', sort_order: 1 },
+      { name: 'Cleaning', slug: 'cleaning', icon: 'mop', sort_order: 2 },
+      { name: 'Delivery', slug: 'delivery', icon: 'truck', sort_order: 3 },
+      { name: 'Consulting', slug: 'consulting', icon: 'graduation-cap', sort_order: 4 },
+    ],
   },
 ];
 
