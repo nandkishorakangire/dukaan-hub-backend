@@ -22,6 +22,7 @@ export class BusinessesService {
     query: ListBusinessesQueryDto,
   ): Promise<PaginatedResult<Prisma.BusinessGetPayload<object>>> {
     const where: Prisma.BusinessWhereInput = {
+      is_published: true,
       ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),
       ...(query.featured !== undefined ? { is_featured: query.featured } : {}),
       ...(query.search
@@ -60,6 +61,7 @@ export class BusinessesService {
 
   async trending(limit = 10) {
     return this.prisma.business.findMany({
+      where: { is_published: true },
       orderBy: [{ trend_score: 'desc' }, { rating: 'desc' }],
       take: Math.min(Math.max(limit, 1), 50),
     });
@@ -114,6 +116,8 @@ export class BusinessesService {
         upi_id: dto.upi_id,
         payment_qr_url: dto.payment_qr_url,
         accepts_internal_payments: dto.accepts_internal_payments ?? true,
+        is_published: dto.is_published ?? true,
+        accepts_cod: dto.accepts_cod ?? true,
       },
     });
 
@@ -162,6 +166,8 @@ export class BusinessesService {
         ...(dto.accepts_internal_payments !== undefined
           ? { accepts_internal_payments: dto.accepts_internal_payments }
           : {}),
+        ...(dto.is_published !== undefined ? { is_published: dto.is_published } : {}),
+        ...(dto.accepts_cod !== undefined ? { accepts_cod: dto.accepts_cod } : {}),
       },
     });
   }

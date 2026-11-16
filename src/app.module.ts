@@ -8,6 +8,7 @@ import {
 } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AdsModule } from './ads/ads.module';
+import { AddressesModule } from './addresses/addresses.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { BusinessesModule } from './businesses/businesses.module';
@@ -59,6 +60,7 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    AddressesModule,
     BusinessesModule,
     CategoriesModule,
     ProductsModule,

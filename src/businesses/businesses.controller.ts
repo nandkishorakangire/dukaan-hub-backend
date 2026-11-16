@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { BusinessesService } from './businesses.service';
 import {
@@ -24,12 +25,14 @@ import {
 export class BusinessesController {
   constructor(private readonly businesses: BusinessesService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'List storefronts (search, category, featured, sort)' })
   list(@Query() query: ListBusinessesQueryDto) {
     return this.businesses.list(query);
   }
 
+  @Public()
   @Get('trending')
   @ApiOperation({ summary: 'Trending storefronts' })
   trending(@Query('limit') limit?: string) {
@@ -43,12 +46,14 @@ export class BusinessesController {
     return this.businesses.mine(userId);
   }
 
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get a storefront by slug' })
   bySlug(@Param('slug') slug: string) {
     return this.businesses.getBySlug(slug);
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a storefront by id' })
   byId(@Param('id', ParseUUIDPipe) id: string) {

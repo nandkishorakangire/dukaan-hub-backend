@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -16,7 +17,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PaymentMode } from '@prisma/client';
+import { PaymentMode, DeliverySpeed } from '@prisma/client';
 
 export class OrderItemInputDto {
   @IsUUID()
@@ -105,6 +106,22 @@ export class CreateOrderDto {
   @IsString()
   @MaxLength(1000)
   notes?: string;
+
+  @IsOptional()
+  @IsEnum(DeliverySpeed)
+  delivery_speed?: DeliverySpeed;
+
+  @IsOptional()
+  @Transform(({ value }: { value: string }) => value?.toUpperCase().trim())
+  @IsString()
+  @Matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, {
+    message: 'gstin must be a valid 15-character GSTIN',
+  })
+  gstin?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  gift_packaging?: boolean;
 
   @IsOptional()
   @Type(() => Number)

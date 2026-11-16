@@ -59,6 +59,13 @@ export class ProductsController {
   }
 
   @Public()
+  @Get('products')
+  @ApiOperation({ summary: 'List active products across all storefronts' })
+  global(@Query() query: ListProductsQueryDto) {
+    return this.products.listGlobal(query);
+  }
+
+  @Public()
   @Get('products/:id')
   @ApiOperation({ summary: 'Get a product by id' })
   byId(@Param('id', ParseUUIDPipe) id: string) {

@@ -15,6 +15,7 @@ import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { UpdateOrderAddressDto } from './dto/update-order-address.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
@@ -46,6 +47,16 @@ export class OrdersController {
   @ApiOperation({ summary: 'Get an order (buyer, seller or admin)' })
   byId(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.orders.getById(id, user);
+  }
+
+  @Patch(':id/address')
+  @ApiOperation({ summary: 'Change the delivery address before the order ships (buyer)' })
+  updateAddress(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateOrderAddressDto,
+  ) {
+    return this.orders.updateAddress(id, user, dto);
   }
 
   @Patch(':id/status')

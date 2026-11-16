@@ -39,6 +39,15 @@ export class PaymentsService {
     if (order.status === 'cancelled') throw new BadRequestException('Order was cancelled');
 
     const provider = dto.provider ?? PaymentProvider.mock;
+
+    if (provider === PaymentProvider.cod && order.business.accepts_cod === false) {
+      throw new BadRequestException('This store does not accept cash on delivery');
+    }
+
+    if (provider === PaymentProvider.pay_later) {
+      return this.createPayLater(order, user);
+    }
+
     const reference = `PAY-${randomUUID()}`;
     const payment = await this.prisma.payment.create({
       data: {
@@ -60,6 +69,89 @@ export class PaymentsService {
         provider === PaymentProvider.upi
           ? this.buildUpiUri(order, order.business.upi_id ?? 'dukaanhub@upi')
           : undefined,
+    };
+  }
+
+  /** Monthly pay-later quota for the signed-in shopper. */
+  async payLaterEligibility(buyerId: string) {
+    const limit = this.config.getOrThrow<number>('payments.payLaterMonthlyLimit');
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const resetsAt = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const used = await this.prisma.order.count({
+      where: {
+        buyer_id: buyerId,
+        pay_later_due_at: { not: null },
+        status: { not: 'cancelled' },
+        created_at: { gte: start, lt: resetsAt },
+      },
+    });
+
+    return {
+      limit,
+      used,
+      remaining: Math.max(0, limit - used),
+      resets_at: resetsAt.toISOString(),
+    };
+  }
+
+  private async createPayLater(order: OrderWithRelations, user: AuthenticatedUser) {
+    if (order.buyer_id !== user.id && user.role !== Role.admin) {
+      throw new ForbiddenException('Only the buyer can choose pay later');
+    }
+    if (order.pay_later_due_at) {
+      throw new ConflictException('Pay later is already scheduled for this order');
+    }
+
+    const eligibility = await this.payLaterEligibility(order.buyer_id);
+    if (eligibility.remaining <= 0) {
+      throw new BadRequestException(
+        `You have used all ${eligibility.limit} pay-later credits this month. They reset on ${eligibility.resets_at.slice(0, 10)}.`,
+      );
+    }
+
+    const now = new Date();
+    const dueAt = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const reference = `PAYLATER-${randomUUID()}`;
+
+    const payment = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          order_id: order.id,
+          provider: PaymentProvider.pay_later,
+          reference,
+          amount: order.total,
+          currency: order.currency,
+          status: PaymentStatus.pending,
+        },
+      });
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          payment_reference: reference,
+          pay_later_due_at: dueAt,
+          status: order.status === 'pending' ? 'confirmed' : order.status,
+        },
+      });
+
+      return created;
+    });
+
+    const refreshed = await this.orders.findOrder(order.id);
+    this.orders.broadcastOrder(
+      refreshed,
+      `Order ${refreshed.order_number} confirmed with pay later`,
+    );
+
+    return {
+      payment,
+      reference,
+      amount: Number(order.total),
+      currency: order.currency,
+      due_at: dueAt.toISOString(),
+      credits_left: eligibility.remaining - 1,
     };
   }
 

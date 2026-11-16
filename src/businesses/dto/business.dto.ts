@@ -10,6 +10,7 @@ import {
   Length,
   Matches,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PartialType } from '@nestjs/swagger';
@@ -20,10 +21,12 @@ export class BusinessTimingDto {
   @MaxLength(40)
   day: string;
 
+  @ValidateIf((timing: BusinessTimingDto) => !timing.closed)
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'open must be HH:MM (24h)' })
   open: string;
 
+  @ValidateIf((timing: BusinessTimingDto) => !timing.closed)
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'close must be HH:MM (24h)' })
   close: string;
@@ -108,6 +111,15 @@ export class CreateBusinessDto {
   @IsOptional()
   @IsBoolean()
   accepts_internal_payments?: boolean;
+
+  /** Unpublished storefronts stay reachable by link but disappear from listings. */
+  @IsOptional()
+  @IsBoolean()
+  is_published?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  accepts_cod?: boolean;
 }
 
 export class UpdateBusinessDto extends PartialType(CreateBusinessDto) {}

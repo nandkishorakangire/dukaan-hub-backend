@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
+import { paginate } from '../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { BusinessesService } from '../businesses/businesses.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +15,10 @@ import {
   UpdateProductDto,
 } from './dto/product.dto';
 
+const productInclude = {
+  category: { select: { id: true, name: true, slug: true } },
+} satisfies Prisma.ProductInclude;
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -23,15 +27,41 @@ export class ProductsService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  async listForBusiness(
-    businessId: string,
-    query: ListProductsQueryDto,
-  ): Promise<PaginatedResult<Prisma.ProductGetPayload<object>>> {
+  async listForBusiness(businessId: string, query: ListProductsQueryDto) {
     await this.ensureBusinessExists(businessId);
 
+    return this.list(
+      {
+        business_id: businessId,
+        is_active: query.include_inactive ? undefined : true,
+      },
+      query,
+    );
+  }
+
+  /**
+   * Every active product across all storefronts. Backs the home/category rails
+   * on the buyer app, which used to rely on bundled mock data.
+   */
+  async listGlobal(query: ListProductsQueryDto) {
+    return this.list({ is_active: true, business: { is_published: true } }, query);
+  }
+
+  async listAllForOwner(
+    businessId: string,
+    user: AuthenticatedUser,
+    query: ListProductsQueryDto,
+  ) {
+    await this.businesses.assertOwned(businessId, user);
+    return this.listForBusiness(businessId, { ...query, include_inactive: true });
+  }
+
+  private async list(
+    base: Prisma.ProductWhereInput,
+    query: ListProductsQueryDto,
+  ) {
     const where: Prisma.ProductWhereInput = {
-      business_id: businessId,
-      is_active: query.include_inactive ? undefined : true,
+      ...base,
       ...(query.category_id ? { category_id: query.category_id } : {}),
       ...(query.search
         ? {
@@ -55,6 +85,7 @@ export class ProductsService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
         where,
+        include: productInclude,
         orderBy,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -63,15 +94,6 @@ export class ProductsService {
     ]);
 
     return paginate(data, total, query.page, query.limit);
-  }
-
-  async listAllForOwner(
-    businessId: string,
-    user: AuthenticatedUser,
-    query: ListProductsQueryDto,
-  ): Promise<PaginatedResult<Prisma.ProductGetPayload<object>>> {
-    await this.businesses.assertOwned(businessId, user);
-    return this.listForBusiness(businessId, { ...query, include_inactive: true });
   }
 
   async getById(id: string, user?: AuthenticatedUser) {
@@ -106,6 +128,7 @@ export class ProductsService {
         category_id: dto.category_id,
         is_active: dto.is_active ?? true,
       },
+      include: productInclude,
     });
 
     this.realtime.emitProductStock(product.business_id, {
@@ -150,6 +173,7 @@ export class ProductsService {
           : {}),
         ...(dto.is_active !== undefined ? { is_active: dto.is_active } : {}),
       },
+      include: productInclude,
     });
 
     if (dto.stock_quantity !== undefined) {

@@ -8,6 +8,7 @@ const INTERNAL_PROVIDERS = [
   PaymentProvider.netbanking,
   PaymentProvider.wallet,
   PaymentProvider.cod,
+  PaymentProvider.pay_later,
 ] as const;
 
 export class PaymentIntentDto {

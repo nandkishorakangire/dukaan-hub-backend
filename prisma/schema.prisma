@@ -42,6 +42,12 @@ enum PaymentProvider {
   wallet
   cod
   vendor_qr
+  pay_later
+}
+
+enum DeliverySpeed {
+  standard
+  fast
 }
 
 enum AdPlacement {
@@ -62,22 +68,80 @@ enum CouponType {
 }
 
 model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String
-  email         String   @unique
-  phone         String?  @unique
-  password_hash String
-  role          Role     @default(buyer)
-  avatar_url    String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  email          String   @unique
+  phone          String?  @unique
+  password_hash  String?
+  role           Role     @default(buyer)
+  avatar_url     String?
+  oauth_provider String?
+  oauth_subject  String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 
-  businesses     Business[]
-  orders         Order[]        @relation("BuyerOrders")
-  chat_messages  ChatMessage[]
-  refresh_tokens RefreshToken[]
+  businesses            Business[]
+  orders                Order[]              @relation("BuyerOrders")
+  chat_messages         ChatMessage[]
+  refresh_tokens        RefreshToken[]
+  addresses             Address[]
+  password_reset_tokens PasswordResetToken[]
 
+  @@unique([oauth_provider, oauth_subject])
   @@map("users")
+}
+
+model Address {
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @db.Uuid
+  label        String   @default("Home")
+  name         String?
+  phone        String?
+  line1        String
+  line2        String?
+  city         String?
+  state        String?
+  pincode      String?
+  latitude     Float?
+  longitude    Float?
+  instructions String?
+  is_default   Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("addresses")
+}
+
+model OtpCode {
+  id          String    @id @default(uuid()) @db.Uuid
+  phone       String
+  code_hash   String
+  purpose     String
+  attempts    Int       @default(0)
+  expires_at  DateTime
+  consumed_at DateTime?
+  created_at  DateTime  @default(now())
+
+  @@index([phone, purpose])
+  @@index([expires_at])
+  @@map("otp_codes")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset_tokens")
 }
 
 model RefreshToken {
@@ -113,6 +177,8 @@ model Business {
   ratings_count             Int      @default(0)
   trend_score               Int      @default(0)
   is_featured               Boolean  @default(false)
+  is_published              Boolean  @default(true)
+  accepts_cod               Boolean  @default(true)
   upi_id                    String?
   payment_qr_url            String?
   accepts_internal_payments Boolean  @default(true)
@@ -187,15 +253,19 @@ model Order {
   subtotal          Decimal       @db.Decimal(12, 2)
   discount          Decimal       @default(0) @db.Decimal(12, 2)
   delivery_fee      Decimal       @default(0) @db.Decimal(12, 2)
+  delivery_speed    DeliverySpeed @default(standard)
   handling_fee      Decimal       @default(0) @db.Decimal(12, 2)
   tip_amount        Decimal       @default(0) @db.Decimal(12, 2)
   donation_amount   Decimal       @default(0) @db.Decimal(12, 2)
   total             Decimal       @db.Decimal(12, 2)
   currency          String        @default("INR")
   coupon_code       String?
+  gstin             String?
+  gift_packaging    Boolean       @default(false)
   payment_mode      PaymentMode
   payment_reference String?
   payment_status    PaymentStatus @default(pending)
+  pay_later_due_at  DateTime?
   status            OrderStatus   @default(pending)
   notes             String?
   delivery_address  Json?

@@ -12,6 +12,7 @@ export const orderInclude = {
       owner_id: true,
       upi_id: true,
       payment_qr_url: true,
+      accepts_cod: true,
     },
   },
   buyer: { select: { id: true, name: true, avatar_url: true, phone: true } },

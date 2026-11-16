@@ -30,6 +30,8 @@ export interface OrderTotalsInput {
   tipAmount: number;
   donationAmount: number;
   freeDeliveryThreshold: number;
+  /** Charged in addition to the standard fee, even above the free-delivery threshold. */
+  fastDeliveryFee?: number;
 }
 
 export interface OrderTotals {
@@ -46,7 +48,8 @@ export function calculateOrderTotals(input: OrderTotalsInput): OrderTotals {
   const subtotal = roundMoney(input.subtotal);
   const discount = roundMoney(Math.min(Math.max(input.discount, 0), subtotal));
   const delivery_fee =
-    subtotal >= input.freeDeliveryThreshold ? 0 : roundMoney(Math.max(input.deliveryFee, 0));
+    (subtotal >= input.freeDeliveryThreshold ? 0 : roundMoney(Math.max(input.deliveryFee, 0))) +
+    roundMoney(Math.max(input.fastDeliveryFee ?? 0, 0));
   const handling_fee = roundMoney(Math.max(input.handlingFee, 0));
   const tip_amount = roundMoney(Math.max(input.tipAmount, 0));
   const donation_amount = roundMoney(Math.max(input.donationAmount, 0));

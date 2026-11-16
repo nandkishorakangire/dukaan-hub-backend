@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrderStatus, PaymentMode, Prisma, Role } from '@prisma/client';
+import { DeliverySpeed, OrderStatus, PaymentMode, Prisma, Role } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { UpdateOrderAddressDto } from './dto/update-order-address.dto';
 import { orderInclude, OrderWithRelations } from './order.include';
 import {
   CANCELLABLE_STATUSES,
@@ -126,6 +127,10 @@ export class OrdersService {
       tipAmount: dto.tip_amount ?? 0,
       donationAmount: dto.donation_amount ?? 0,
       freeDeliveryThreshold: this.config.getOrThrow<number>('payments.freeDeliveryThreshold'),
+      fastDeliveryFee:
+        dto.delivery_speed === DeliverySpeed.fast
+          ? this.config.getOrThrow<number>('payments.fastDeliveryFee')
+          : 0,
     });
 
     const order = await this.prisma.$transaction(async (tx) => {
@@ -153,6 +158,9 @@ export class OrdersService {
           total: totals.total,
           currency: 'INR',
           coupon_code: couponCode,
+          delivery_speed: dto.delivery_speed ?? DeliverySpeed.standard,
+          gstin: dto.gstin,
+          gift_packaging: dto.gift_packaging ?? false,
           payment_mode: dto.payment_mode,
           payment_status: 'pending',
           status: 'pending',
@@ -252,12 +260,40 @@ export class OrdersService {
     return updated;
   }
 
+  /** Lets the buyer correct the delivery address until the parcel ships. */
+  async updateAddress(
+    id: string,
+    user: AuthenticatedUser,
+    dto: UpdateOrderAddressDto,
+  ): Promise<OrderWithRelations> {
+    const order = await this.findOrder(id);
+    if (user.role !== Role.admin && order.buyer_id !== user.id) {
+      throw new ForbiddenException('Only the buyer can change the delivery address');
+    }
+    if (order.status === OrderStatus.shipped || order.status === OrderStatus.delivered) {
+      throw new BadRequestException('This order has already shipped');
+    }
+    if (order.status === OrderStatus.cancelled) {
+      throw new BadRequestException('This order was cancelled');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: { delivery_address: dto.delivery_address as unknown as Prisma.InputJsonValue },
+      include: orderInclude,
+    });
+    this.emitOrderChanged(
+      updated,
+      `Delivery address updated for ${updated.order_number}`,
+    );
+    return updated;
+  }
+
   async cancel(
     id: string,
     user: AuthenticatedUser,
     reason?: string,
-  ): Promise<OrderWithRelations> {
-    const order = await this.findOrder(id);
+  ): Promise<OrderWithRelations> {    const order = await this.findOrder(id);
     if (
       user.role !== Role.admin &&
       order.buyer_id !== user.id &&

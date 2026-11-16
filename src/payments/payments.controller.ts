@@ -59,6 +59,19 @@ export class OrderPaymentsController {
 
 @ApiTags('payments')
 @Controller('payments')
+@ApiBearerAuth()
+export class PayLaterController {
+  constructor(private readonly payments: PaymentsService) {}
+
+  @Get('pay-later')
+  @ApiOperation({ summary: 'Remaining pay-later credits for this month' })
+  eligibility(@CurrentUser('id') userId: string) {
+    return this.payments.payLaterEligibility(userId);
+  }
+}
+
+@ApiTags('payments')
+@Controller('payments')
 export class PaymentWebhookController {
   constructor(private readonly payments: PaymentsService) {}
 
