@@ -4,9 +4,13 @@ import { Prisma } from '@prisma/client';
 export const publicUserSelect = {
   id: true,
   name: true,
+  first_name: true,
+  middle_name: true,
+  last_name: true,
   email: true,
   phone: true,
   role: true,
+  roles: true,
   avatar_url: true,
   created_at: true,
   updated_at: true,

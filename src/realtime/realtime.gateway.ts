@@ -9,9 +9,8 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Role } from '@prisma/client';
 import { Server, Socket } from 'socket.io';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { AuthService } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from './realtime.service';
@@ -55,7 +54,7 @@ export class RealtimeGateway
       const user = await this.auth.verifyAccessToken(token);
       (client.data as SocketData).user = user;
       await client.join(`user:${user.id}`);
-      client.emit('authenticated', { id: user.id, role: user.role });
+      client.emit('authenticated', { id: user.id, role: user.role, roles: user.roles });
     } catch {
       client.emit('unauthorized', { message: 'Invalid or expired token' });
       client.disconnect(true);
@@ -129,7 +128,7 @@ export class RealtimeGateway
     });
     if (!order) return false;
     return (
-      user.role === Role.admin ||
+      isAdmin(user) ||
       order.buyer_id === user.id ||
       order.business.owner_id === user.id
     );

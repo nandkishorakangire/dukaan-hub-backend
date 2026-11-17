@@ -7,9 +7,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentProvider, PaymentStatus, Role } from '@prisma/client';
+import { PaymentProvider, PaymentStatus, SavedPaymentMethodKind } from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { OrdersService } from '../orders/orders.service';
 import { orderInclude, OrderWithRelations } from '../orders/order.include';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +26,7 @@ export class PaymentsService {
   async createIntent(orderId: string, user: AuthenticatedUser, dto: PaymentIntentDto) {
     const order = await this.orders.findOrder(orderId);
     if (
-      user.role !== Role.admin &&
+      !isAdmin(user) &&
       order.buyer_id !== user.id &&
       order.business.owner_id !== user.id
     ) {
@@ -38,7 +38,24 @@ export class PaymentsService {
     if (order.payment_status === 'paid') throw new ConflictException('Order is already paid');
     if (order.status === 'cancelled') throw new BadRequestException('Order was cancelled');
 
-    const provider = dto.provider ?? PaymentProvider.mock;
+    const savedMethod = dto.saved_method_id
+      ? await this.prisma.savedPaymentMethod.findFirst({
+          where: { id: dto.saved_method_id, user_id: user.id },
+        })
+      : null;
+    if (dto.saved_method_id && !savedMethod) {
+      throw new NotFoundException('Saved payment method not found');
+    }
+
+    const provider = savedMethod
+      ? this.providerForSavedKind(savedMethod.kind)
+      : (dto.provider ?? PaymentProvider.mock);
+
+    if (savedMethod && dto.provider && dto.provider !== provider) {
+      throw new BadRequestException(
+        'The selected payment provider does not match the saved payment method',
+      );
+    }
 
     if (provider === PaymentProvider.cod && order.business.accepts_cod === false) {
       throw new BadRequestException('This store does not accept cash on delivery');
@@ -57,6 +74,7 @@ export class PaymentsService {
         amount: order.total,
         currency: order.currency,
         status: PaymentStatus.pending,
+        saved_method_id: savedMethod?.id ?? null,
       },
     });
 
@@ -70,6 +88,20 @@ export class PaymentsService {
           ? this.buildUpiUri(order, order.business.upi_id ?? 'dukaanhub@upi')
           : undefined,
     };
+  }
+
+  /** Maps a saved instrument to the rail that charges it. */
+  private providerForSavedKind(kind: SavedPaymentMethodKind): PaymentProvider {
+    switch (kind) {
+      case SavedPaymentMethodKind.upi:
+        return PaymentProvider.upi;
+      case SavedPaymentMethodKind.card:
+        return PaymentProvider.card;
+      case SavedPaymentMethodKind.netbanking:
+        return PaymentProvider.netbanking;
+      case SavedPaymentMethodKind.wallet:
+        return PaymentProvider.wallet;
+    }
   }
 
   /** Monthly pay-later quota for the signed-in shopper. */
@@ -97,7 +129,7 @@ export class PaymentsService {
   }
 
   private async createPayLater(order: OrderWithRelations, user: AuthenticatedUser) {
-    if (order.buyer_id !== user.id && user.role !== Role.admin) {
+    if (order.buyer_id !== user.id && !isAdmin(user)) {
       throw new ForbiddenException('Only the buyer can choose pay later');
     }
     if (order.pay_later_due_at) {
@@ -157,7 +189,7 @@ export class PaymentsService {
 
   async confirm(orderId: string, user: AuthenticatedUser, dto: ConfirmPaymentDto) {
     const order = await this.orders.findOrder(orderId);
-    const isSeller = user.role === Role.admin || order.business.owner_id === user.id;
+    const isSeller = isAdmin(user) || order.business.owner_id === user.id;
     const isBuyer = order.buyer_id === user.id;
     if (!isSeller && !isBuyer) {
       throw new ForbiddenException('You do not have access to this order');

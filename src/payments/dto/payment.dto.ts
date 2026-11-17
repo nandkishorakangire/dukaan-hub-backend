@@ -1,4 +1,4 @@
-import { IsEnum, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaymentProvider } from '@prisma/client';
 
 const INTERNAL_PROVIDERS = [
@@ -15,6 +15,11 @@ export class PaymentIntentDto {
   @IsOptional()
   @IsIn(INTERNAL_PROVIDERS)
   provider?: PaymentProvider;
+
+  /** Instrument the shopper saved beforehand; the provider is derived from it. */
+  @IsOptional()
+  @IsUUID()
+  saved_method_id?: string;
 }
 
 export class ConfirmPaymentDto {

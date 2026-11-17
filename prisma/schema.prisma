@@ -13,6 +13,19 @@ enum Role {
   admin
 }
 
+enum SavedPaymentMethodKind {
+  upi
+  card
+  netbanking
+  wallet
+}
+
+enum EmailChangeStatus {
+  pending
+  approved
+  rejected
+}
+
 enum OrderStatus {
   pending
   confirmed
@@ -70,22 +83,31 @@ enum CouponType {
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   name           String
+  /** Split identity fields. `name` stays the composed display name. */
+  first_name     String?
+  middle_name    String?
+  last_name      String?
   email          String   @unique
   phone          String?  @unique
   password_hash  String?
+  /** Primary role kept for legacy checks; `roles` is the additive source of truth. */
   role           Role     @default(buyer)
+  roles          Role[]   @default([buyer])
   avatar_url     String?
   oauth_provider String?
   oauth_subject  String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  businesses            Business[]
-  orders                Order[]              @relation("BuyerOrders")
-  chat_messages         ChatMessage[]
-  refresh_tokens        RefreshToken[]
-  addresses             Address[]
-  password_reset_tokens PasswordResetToken[]
+  businesses             Business[]
+  orders                 Order[]              @relation("BuyerOrders")
+  chat_messages          ChatMessage[]
+  refresh_tokens         RefreshToken[]
+  addresses              Address[]
+  password_reset_tokens  PasswordResetToken[]
+  saved_payment_methods  SavedPaymentMethod[]
+  email_change_requests  EmailChangeRequest[] @relation("EmailChangeOwner")
+  reviewed_email_changes EmailChangeRequest[] @relation("EmailChangeReviewer")
 
   @@unique([oauth_provider, oauth_subject])
   @@map("users")
@@ -269,6 +291,7 @@ model Order {
   status            OrderStatus   @default(pending)
   notes             String?
   delivery_address  Json?
+  seen_at           DateTime?
   created_at        DateTime      @default(now())
   updated_at        DateTime      @updatedAt
 
@@ -303,21 +326,70 @@ model OrderItem {
 }
 
 model Payment {
-  id         String          @id @default(uuid()) @db.Uuid
-  order_id   String          @db.Uuid
-  provider   PaymentProvider
-  reference  String          @unique
-  amount     Decimal         @db.Decimal(12, 2)
-  currency   String          @default("INR")
-  status     PaymentStatus   @default(pending)
-  payload    Json?
-  created_at DateTime        @default(now())
-  updated_at DateTime        @updatedAt
+  id              String          @id @default(uuid()) @db.Uuid
+  order_id        String          @db.Uuid
+  provider        PaymentProvider
+  reference       String          @unique
+  amount          Decimal         @db.Decimal(12, 2)
+  currency        String          @default("INR")
+  status          PaymentStatus   @default(pending)
+  /** Instrument the shopper chose, when it was one they saved beforehand. */
+  saved_method_id String?         @db.Uuid
+  payload         Json?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
 
-  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  order        Order               @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  saved_method SavedPaymentMethod? @relation(fields: [saved_method_id], references: [id], onDelete: SetNull)
 
   @@index([order_id])
+  @@index([saved_method_id])
   @@map("payments")
+}
+
+/**
+ * A shopper's saved instrument. Card rows deliberately keep only the brand,
+ * last four digits and expiry — never the full number or CVV.
+ */
+model SavedPaymentMethod {
+  id         String                 @id @default(uuid()) @db.Uuid
+  user_id    String                 @db.Uuid
+  kind       SavedPaymentMethodKind
+  label      String
+  detail     String
+  provider   String?
+  brand      String?
+  last4      String?
+  expiry     String?
+  is_default Boolean                @default(false)
+  created_at DateTime               @default(now())
+  updated_at DateTime               @updatedAt
+
+  user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([user_id])
+  @@map("saved_payment_methods")
+}
+
+/** An email change that only takes effect after a DukaanHub admin approves it. */
+model EmailChangeRequest {
+  id             String            @id @default(uuid()) @db.Uuid
+  user_id        String            @db.Uuid
+  current_email  String
+  new_email      String
+  status         EmailChangeStatus @default(pending)
+  reviewed_by_id String?           @db.Uuid
+  reviewed_at    DateTime?
+  created_at     DateTime          @default(now())
+  updated_at     DateTime          @updatedAt
+
+  user        User  @relation("EmailChangeOwner", fields: [user_id], references: [id], onDelete: Cascade)
+  reviewed_by User? @relation("EmailChangeReviewer", fields: [reviewed_by_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([status])
+  @@map("email_change_requests")
 }
 
 model ChatMessage {

@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ChatSender, Prisma, Role } from '@prisma/client';
+import { ChatSender, Prisma } from '@prisma/client';
 import { paginate, PaginationQueryDto } from '../common/dto/pagination.dto';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { extractMentions, isPriorityMessage } from '../common/utils/mentions';
 import { OrdersService } from '../orders/orders.service';
 import { OrderWithRelations } from '../orders/order.include';
@@ -120,7 +120,7 @@ export class ChatService {
 
   private partyOf(order: OrderWithRelations, user: AuthenticatedUser): ChatSender | null {
     if (order.buyer_id === user.id) return ChatSender.buyer;
-    if (user.role === Role.admin || order.business.owner_id === user.id) return ChatSender.seller;
+    if (isAdmin(user) || order.business.owner_id === user.id) return ChatSender.seller;
     return null;
   }
 }

@@ -6,10 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DeliverySpeed, OrderStatus, PaymentMode, Prisma, Role } from '@prisma/client';
+import { DeliverySpeed, OrderStatus, PaymentMode, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { BusinessesService } from '../businesses/businesses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -203,7 +203,7 @@ export class OrdersService {
     if (query.business_id) {
       await this.businesses.assertOwned(query.business_id, user);
       where.business_id = query.business_id;
-    } else if (user.role !== Role.admin) {
+    } else if (!isAdmin(user)) {
       where.buyer_id = user.id;
     }
     if (query.status) where.status = query.status;
@@ -216,7 +216,7 @@ export class OrdersService {
     query: ListOrdersQueryDto,
   ): Promise<PaginatedResult<OrderWithRelations>> {
     const businesses = await this.prisma.business.findMany({
-      where: user.role === Role.admin ? {} : { owner_id: user.id },
+      where: isAdmin(user) ? {} : { owner_id: user.id },
       select: { id: true },
     });
     const where: Prisma.OrderWhereInput = {
@@ -260,6 +260,27 @@ export class OrdersService {
     return updated;
   }
 
+  /** Mark orders as seen by the seller (for notification badge sync across devices). */
+  async markSeen(user: AuthenticatedUser, orderIds: string[]): Promise<void> {
+    if (!orderIds.length) return;
+
+    const orders = await this.prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      include: { business: { select: { owner_id: true } } },
+    });
+
+    const ownedOrderIds = orders
+      .filter((o) => isAdmin(user) || o.business.owner_id === user.id)
+      .map((o) => o.id);
+
+    if (!ownedOrderIds.length) return;
+
+    await this.prisma.order.updateMany({
+      where: { id: { in: ownedOrderIds }, seen_at: null },
+      data: { seen_at: new Date() },
+    });
+  }
+
   /** Lets the buyer correct the delivery address until the parcel ships. */
   async updateAddress(
     id: string,
@@ -267,7 +288,7 @@ export class OrdersService {
     dto: UpdateOrderAddressDto,
   ): Promise<OrderWithRelations> {
     const order = await this.findOrder(id);
-    if (user.role !== Role.admin && order.buyer_id !== user.id) {
+    if (!isAdmin(user) && order.buyer_id !== user.id) {
       throw new ForbiddenException('Only the buyer can change the delivery address');
     }
     if (order.status === OrderStatus.shipped || order.status === OrderStatus.delivered) {
@@ -295,7 +316,7 @@ export class OrdersService {
     reason?: string,
   ): Promise<OrderWithRelations> {    const order = await this.findOrder(id);
     if (
-      user.role !== Role.admin &&
+      !isAdmin(user) &&
       order.buyer_id !== user.id &&
       order.business.owner_id !== user.id
     ) {
@@ -404,7 +425,7 @@ export class OrdersService {
 
   private assertCanView(order: OrderWithRelations, user: AuthenticatedUser): void {
     if (
-      user.role !== Role.admin &&
+      !isAdmin(user) &&
       order.buyer_id !== user.id &&
       order.business.owner_id !== user.id
     ) {
@@ -413,7 +434,7 @@ export class OrdersService {
   }
 
   private assertCanSell(order: OrderWithRelations, user: AuthenticatedUser): void {
-    if (user.role !== Role.admin && order.business.owner_id !== user.id) {
+    if (!isAdmin(user) && order.business.owner_id !== user.id) {
       throw new ForbiddenException('Only the seller can change this order');
     }
   }

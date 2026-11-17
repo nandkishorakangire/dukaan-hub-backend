@@ -4,10 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { BusinessesService } from '../businesses/businesses.service';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdDto, ListAdsQueryDto, UpdateAdDto } from './dto/ad.dto';
 
@@ -46,7 +46,7 @@ export class AdsService {
     query: ListAdsQueryDto,
   ): Promise<PaginatedResult<AdWithBusiness>> {
     const where: Prisma.AdWhereInput = {
-      ...(user.role === Role.admin ? {} : { business: { owner_id: user.id } }),
+      ...(isAdmin(user) ? {} : { business: { owner_id: user.id } }),
       ...(query.placement ? { placement: query.placement } : {}),
       ...(query.business_id ? { business_id: query.business_id } : {}),
       ...(query.active !== undefined ? { is_active: query.active } : {}),
@@ -64,7 +64,7 @@ export class AdsService {
   async create(user: AuthenticatedUser, dto: CreateAdDto): Promise<AdWithBusiness> {
     if (dto.business_id) {
       await this.businesses.assertOwned(dto.business_id, user);
-    } else if (user.role !== Role.admin) {
+    } else if (!isAdmin(user)) {
       throw new BadRequestException('business_id is required for storefront ads');
     }
 
@@ -142,7 +142,7 @@ export class AdsService {
   }
 
   private async assertCanManage(ad: AdWithBusiness, user: AuthenticatedUser): Promise<void> {
-    if (user.role === Role.admin) return;
+    if (isAdmin(user)) return;
     if (!ad.business_id) {
       throw new ForbiddenException('You do not have access to this ad');
     }

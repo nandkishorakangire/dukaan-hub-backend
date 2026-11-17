@@ -6,7 +6,7 @@ import {
 import { Prisma, Role } from '@prisma/client';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { uniqueSlug } from '../common/utils/slug';
-import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateBusinessDto,
@@ -121,11 +121,20 @@ export class BusinessesService {
       },
     });
 
-    // Creating a storefront turns a buyer into a seller.
-    await this.prisma.user.updateMany({
-      where: { id: ownerId, role: Role.buyer },
-      data: { role: Role.seller },
+    // Creating a storefront adds the seller role alongside the buyer role.
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { role: true, roles: true },
     });
+    if (owner && !owner.roles.includes(Role.seller)) {
+      await this.prisma.user.update({
+        where: { id: ownerId },
+        data: {
+          roles: [...owner.roles, Role.seller],
+          ...(owner.role === Role.admin ? {} : { role: Role.seller }),
+        },
+      });
+    }
 
     return business;
   }
@@ -182,7 +191,7 @@ export class BusinessesService {
   async assertOwned(id: string, user: AuthenticatedUser) {
     const business = await this.prisma.business.findUnique({ where: { id } });
     if (!business) throw new NotFoundException('Business not found');
-    if (business.owner_id !== user.id && user.role !== Role.admin) {
+    if (business.owner_id !== user.id && !isAdmin(user)) {
       throw new ForbiddenException('You do not have access to this business');
     }
     return business;

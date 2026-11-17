@@ -14,6 +14,7 @@ import { AuthModule } from './auth/auth.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ChatModule } from './chat/chat.module';
+import { CouponsModule } from './coupons/coupons.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AppThrottlerGuard } from './common/guards/throttler.guard';
@@ -24,6 +25,7 @@ import { envValidationSchema } from './config/env.validation';
 import { HealthController } from './health/health.controller';
 import { OrdersModule } from './orders/orders.module';
 import { PagesModule } from './pages/pages.module';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
@@ -66,11 +68,13 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     OrdersModule,
     PaymentsModule,
+    PaymentMethodsModule,
     ChatModule,
     RealtimeModule,
     PagesModule,
     AdsModule,
     UploadsModule,
+    CouponsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

@@ -52,15 +52,67 @@ type BusinessSeed = {
 const USERS: {
   email: string;
   name: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
   phone: string;
   role: Role;
+  roles: Role[];
 }[] = [
-  { email: 'admin@dukaanhub.local', name: 'DukaanHub Admin', phone: '9000000000', role: Role.admin },
-  { email: 'seller@dukaanhub.local', name: 'Rakesh Sharma', phone: '9876543210', role: Role.seller },
-  { email: 'seller2@dukaanhub.local', name: 'Meera Kapoor', phone: '9876500001', role: Role.seller },
-  { email: 'seller3@dukaanhub.local', name: 'Arjun Verma', phone: '9999900001', role: Role.seller },
-  { email: 'buyer@dukaanhub.local', name: 'Demo Buyer', phone: '9812345678', role: Role.buyer },
-  { email: 'buyer2@dukaanhub.local', name: 'Riya Singh', phone: '9812345679', role: Role.buyer },
+  {
+    email: 'admin@dukaanhub.local',
+    name: 'DukaanHub Admin',
+    first_name: 'DukaanHub',
+    last_name: 'Admin',
+    phone: '9000000000',
+    role: Role.admin,
+    roles: [Role.admin],
+  },
+  {
+    email: 'seller@dukaanhub.local',
+    name: 'Rakesh Sharma',
+    first_name: 'Rakesh',
+    last_name: 'Sharma',
+    phone: '9876543210',
+    role: Role.seller,
+    roles: [Role.buyer, Role.seller],
+  },
+  {
+    email: 'seller2@dukaanhub.local',
+    name: 'Meera Kapoor',
+    first_name: 'Meera',
+    last_name: 'Kapoor',
+    phone: '9876500001',
+    role: Role.seller,
+    roles: [Role.buyer, Role.seller],
+  },
+  {
+    email: 'seller3@dukaanhub.local',
+    name: 'Arjun Verma',
+    first_name: 'Arjun',
+    last_name: 'Verma',
+    phone: '9999900001',
+    role: Role.seller,
+    roles: [Role.buyer, Role.seller],
+  },
+  {
+    email: 'buyer@dukaanhub.local',
+    name: 'Demo Buyer',
+    first_name: 'Demo',
+    last_name: 'Buyer',
+    phone: '9812345678',
+    role: Role.buyer,
+    roles: [Role.buyer],
+  },
+  {
+    email: 'buyer2@dukaanhub.local',
+    name: 'Riya Singh',
+    first_name: 'Riya',
+    last_name: 'Singh',
+    phone: '9812345679',
+    role: Role.buyer,
+    roles: [Role.buyer],
+  },
 ];
 
 const CATEGORIES: {
@@ -507,15 +559,23 @@ async function seed(): Promise<void> {
       where: { email: user.email },
       update: {
         name: user.name,
+        first_name: user.first_name,
+        middle_name: user.middle_name ?? null,
+        last_name: user.last_name,
         phone: user.phone,
         role: user.role,
+        roles: user.roles,
         password_hash: passwordHash,
       },
       create: {
         email: user.email,
         name: user.name,
+        first_name: user.first_name,
+        middle_name: user.middle_name ?? null,
+        last_name: user.last_name,
         phone: user.phone,
         role: user.role,
+        roles: user.roles,
         password_hash: passwordHash,
       },
     });

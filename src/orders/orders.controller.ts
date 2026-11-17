@@ -15,6 +15,7 @@ import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { MarkOrdersSeenDto } from './dto/mark-orders-seen.dto';
 import { UpdateOrderAddressDto } from './dto/update-order-address.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
@@ -41,6 +42,13 @@ export class OrdersController {
   @ApiOperation({ summary: 'List orders across all storefronts I own' })
   seller(@CurrentUser() user: AuthenticatedUser, @Query() query: ListOrdersQueryDto) {
     return this.orders.listForSeller(user, query);
+  }
+
+  @Patch('seen')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Mark orders as seen by the seller (for notification badge sync)' })
+  markSeen(@CurrentUser() user: AuthenticatedUser, @Body() dto: MarkOrdersSeenDto) {
+    return this.orders.markSeen(user, dto.order_ids);
   }
 
   @Get(':id')

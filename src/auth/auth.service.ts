@@ -141,7 +141,13 @@ export class AuthService {
   async getAuthenticatedUser(id: string) {
     const user = await this.users.findById(id);
     if (!user) throw new UnauthorizedException('Account no longer exists');
-    return { id: user.id, email: user.email, name: user.name, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      roles: user.roles?.length ? user.roles : [user.role],
+    };
   }
 
   /** Verifies a bearer token presented during a Socket.IO handshake. */
@@ -532,14 +538,24 @@ export class AuthService {
     return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);
   }
 
-  private async issueTokens(user: { id: string; email: string; role: Role }): Promise<AuthTokens> {
+  private async issueTokens(user: {
+    id: string;
+    email: string;
+    role: Role;
+    roles: Role[];
+  }): Promise<AuthTokens> {
     const accessSecret = this.config.getOrThrow<string>('jwt.accessSecret');
     const refreshSecret = this.config.getOrThrow<string>('jwt.refreshSecret');
     const accessTtl = this.config.getOrThrow<string>('jwt.accessTtl');
     const refreshTtl = this.config.getOrThrow<string>('jwt.refreshTtl');
     const jti = randomUUID();
 
-    const basePayload = { sub: user.id, email: user.email, role: user.role };
+    const basePayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      roles: user.roles,
+    };
     const accessToken = await this.jwt.signAsync(
       { ...basePayload, type: 'access', jti },
       { secret: accessSecret, expiresIn: accessTtl as never },
