@@ -20,6 +20,18 @@ export const envValidationSchema = Joi.object({
   GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
   FACEBOOK_APP_ID: Joi.string().allow('').default(''),
   FACEBOOK_APP_SECRET: Joi.string().allow('').default(''),
+  APPLE_CLIENT_ID: Joi.string().allow('').default(''),
+  APPLE_TEAM_ID: Joi.string().allow('').default(''),
+  APPLE_KEY_ID: Joi.string().allow('').default(''),
+  APPLE_PRIVATE_KEY: Joi.string().allow('').default(''),
+
+  SMTP_HOST: Joi.string().allow('').default(''),
+  SMTP_PORT: Joi.number().port().default(587),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow('').default(''),
+  SMTP_PASSWORD: Joi.string().allow('').default(''),
+  SMTP_FROM: Joi.string().allow('').default(''),
+  FAST2SMS_API_KEY: Joi.string().allow('').default(''),
 
   UPLOAD_DIR: Joi.string().default('uploads'),
   MAX_UPLOAD_MB: Joi.number().min(1).max(50).default(5),

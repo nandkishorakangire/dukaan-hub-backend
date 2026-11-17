@@ -67,6 +67,12 @@ export class CreateBusinessDto {
   @IsUrl({ require_tld: false }, { each: true })
   images?: string[];
 
+  /** Optional carousel videos (remote URLs). */
+  @IsOptional()
+  @IsArray()
+  @IsUrl({ require_tld: false }, { each: true })
+  videos?: string[];
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

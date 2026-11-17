@@ -4,7 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { EmailChangeStatus, Prisma, Role } from '@prisma/client';
+import { verifyVerificationToken } from '../auth/verification-token';
 import { composeName, NameParts, splitName } from '../common/utils/name';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto, paginate, PaginatedResult } from '../common/dto/pagination.dto';
@@ -28,7 +31,11 @@ type CreateUserInput = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+  ) {}
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
@@ -193,8 +200,14 @@ export class UsersService {
   /* Email change requests (admin approved)                              */
   /* ------------------------------------------------------------------ */
 
-  async requestEmailChange(userId: string, requestedEmail: string) {
+  async requestEmailChange(userId: string, requestedEmail: string, verificationToken: string) {
     const newEmail = requestedEmail.toLowerCase().trim();
+    await verifyVerificationToken(this.jwt, this.config, verificationToken, {
+      target: newEmail,
+      channel: 'email',
+      purpose: 'email-change',
+    });
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },

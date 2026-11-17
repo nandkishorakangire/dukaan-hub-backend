@@ -32,6 +32,19 @@ export interface AppConfig {
     googleClientId: string;
     facebookAppId: string;
     facebookAppSecret: string;
+    appleClientId: string;
+    appleTeamId: string;
+    appleKeyId: string;
+    applePrivateKey: string;
+  };
+  notifications: {
+    smtpHost: string;
+    smtpPort: number;
+    smtpSecure: boolean;
+    smtpUser: string;
+    smtpPassword: string;
+    smtpFrom: string;
+    fast2smsApiKey: string;
   };
   throttle: {
     ttl: number;
@@ -75,6 +88,19 @@ export default (): AppConfig => ({
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
     facebookAppId: process.env.FACEBOOK_APP_ID ?? '',
     facebookAppSecret: process.env.FACEBOOK_APP_SECRET ?? '',
+    appleClientId: process.env.APPLE_CLIENT_ID ?? '',
+    appleTeamId: process.env.APPLE_TEAM_ID ?? '',
+    appleKeyId: process.env.APPLE_KEY_ID ?? '',
+    applePrivateKey: process.env.APPLE_PRIVATE_KEY ?? '',
+  },
+  notifications: {
+    smtpHost: process.env.SMTP_HOST ?? '',
+    smtpPort: Number(process.env.SMTP_PORT ?? 587),
+    smtpSecure: (process.env.SMTP_SECURE ?? 'false') === 'true',
+    smtpUser: process.env.SMTP_USER ?? '',
+    smtpPassword: process.env.SMTP_PASSWORD ?? '',
+    smtpFrom: process.env.SMTP_FROM ?? '',
+    fast2smsApiKey: process.env.FAST2SMS_API_KEY ?? '',
   },
   throttle: {
     ttl: Number(process.env.THROTTLE_TTL ?? 60),

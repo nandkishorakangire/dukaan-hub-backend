@@ -45,6 +45,7 @@ export class CreateSavedPaymentMethodDto {
   @Max(2100)
   expiry_year?: number;
 
+  @IsOptional()
   @ValidateIf((dto: CreateSavedPaymentMethodDto) => dto.kind === SavedPaymentMethodKind.card)
   @IsString()
   @Length(2, 60)

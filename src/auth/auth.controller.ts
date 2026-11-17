@@ -10,6 +10,7 @@ import { ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SocialLoginDto } from './dto/social.dto';
+import { RequestVerificationDto, VerifyVerificationDto } from './dto/verification.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -56,6 +57,22 @@ export class AuthController {
   }
 
   @Public()
+  @Post('verification/request')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Email or text a verification code to an address or mobile number' })
+  requestVerification(@Body() dto: RequestVerificationDto) {
+    return this.auth.requestVerification(dto);
+  }
+
+  @Public()
+  @Post('verification/verify')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify a code and return a short-lived verification token' })
+  verifyVerification(@Body() dto: VerifyVerificationDto) {
+    return this.auth.verifyVerification(dto);
+  }
+
+  @Public()
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Start a password reset for an email address' })
@@ -74,7 +91,7 @@ export class AuthController {
   @Public()
   @Post('social')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Sign in with a Google or Facebook credential' })
+  @ApiOperation({ summary: 'Sign in with a Google or Apple credential' })
   social(@Body() dto: SocialLoginDto) {
     return this.auth.socialLogin(dto);
   }

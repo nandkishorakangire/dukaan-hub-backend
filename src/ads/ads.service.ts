@@ -75,6 +75,7 @@ export class AdsService {
         business_id: dto.business_id ?? null,
         title: dto.title.trim(),
         image_url: dto.image_url,
+        video_url: dto.video_url,
         link_url: dto.link_url,
         placement: dto.placement,
         starts_at: dto.starts_at ? new Date(dto.starts_at) : null,
@@ -102,6 +103,7 @@ export class AdsService {
       data: {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
         ...(dto.image_url !== undefined ? { image_url: dto.image_url } : {}),
+        ...(dto.video_url !== undefined ? { video_url: dto.video_url } : {}),
         ...(dto.link_url !== undefined ? { link_url: dto.link_url } : {}),
         ...(dto.placement !== undefined ? { placement: dto.placement } : {}),
         ...(dto.starts_at !== undefined

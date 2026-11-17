@@ -189,6 +189,7 @@ model Business {
   logo_url                  String?
   banner_url                String?
   images                    String[] @default([])
+  videos                    String[] @default([])
   amenities                 String[] @default([])
   category                  String?
   address                   String?
@@ -437,6 +438,7 @@ model Ad {
   business_id String?     @db.Uuid
   title       String
   image_url   String
+  video_url   String?
   link_url    String?
   placement   AdPlacement
   starts_at   DateTime?

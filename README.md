@@ -50,6 +50,15 @@ See [`.env.example`](./.env.example) for every variable.
 | `DATABASE_URL` | PostgreSQL connection string |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Token signing secrets (min 16 chars) |
 | `JWT_ACCESS_TTL` / `JWT_REFRESH_TTL` | Token lifetimes (`15m`, `7d`) |
+| `OTP_TTL_MINUTES` / `OTP_MAX_ATTEMPTS` / `PASSWORD_RESET_TTL_MINUTES` | Code lifetime and attempt limit |
+| `AUTH_EXPOSE_CODES` | Echo verification codes in API responses (default `true` outside production) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID for `/auth/social` |
+| `APPLE_CLIENT_ID` | Apple Services ID used to verify Apple identity tokens |
+| `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | Apple developer credentials (reserved for server-side Apple flows) |
+| `SMTP_HOST` / `SMTP_FROM` | Enable SMTP delivery of email verification codes (both required) |
+| `SMTP_PORT` / `SMTP_SECURE` | SMTP port (default `587`) and TLS flag (default `false`) |
+| `SMTP_USER` / `SMTP_PASSWORD` | Optional SMTP authentication credentials |
+| `FAST2SMS_API_KEY` | Fast2SMS API key for phone verification codes (empty skips SMS) |
 | `CORS_ORIGINS` | Comma-separated origins, or `*` |
 | `PUBLIC_BASE_URL` | Prefix used for uploaded file URLs |
 | `UPLOAD_DIR` | Local upload directory (served at `/uploads`) |
@@ -90,15 +99,26 @@ All routes are prefixed with `/api/v1`. Protected routes use
 
 | Method | Route | Notes |
 | --- | --- | --- |
-| POST | `/auth/register` | `{ name, email, password, phone? }` |
+| POST | `/auth/verification/request` | `{ target, channel: "email"\|"phone", purpose: "signup"\|"email-change" }` — sends a code |
+| POST | `/auth/verification/verify` | Above plus `code` — returns `verification_token` |
+| POST | `/auth/register` | `{ first_name, middle_name?, last_name?, email, password, phone?, email_verification_token, phone_verification_token? }` (`name` is still accepted for old clients) |
 | POST | `/auth/login` | `{ email, password }` |
+| POST | `/auth/otp/request`, `/auth/otp/verify` | Mobile sign-in/sign-up with SMS codes |
+| POST | `/auth/social` | `{ provider: "google"\|"apple", id_token }` (plus `full_name` on first Apple login) |
 | POST | `/auth/refresh` | `{ refreshToken }` — rotates the token |
 | POST | `/auth/logout` | Revokes a refresh token |
 | GET | `/auth/me` | Current user |
 
+Email and phone verification codes are stored as hashed OTPs. When a delivery
+gateway is not configured (or fails), requests still succeed; with
+`AUTH_EXPOSE_CODES=true` the code is returned in the response for local testing.
+
 ### Users (`/users`)
 
-`GET /users/me`, `PATCH /users/me`.
+`GET /users/me`, `PATCH /users/me`. Email changes require a verified address:
+call `/auth/verification/request` and `/auth/verification/verify` with
+`purpose: "email-change"`, then `POST /users/me/email-change` with
+`{ email, verification_token }`. An admin still has to approve the request.
 
 ### Businesses (`/businesses`)
 

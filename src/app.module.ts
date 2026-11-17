@@ -23,6 +23,7 @@ import { DecimalSerializerInterceptor } from './common/interceptors/decimal-seri
 import configuration from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { HealthController } from './health/health.controller';
+import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PagesModule } from './pages/pages.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
@@ -60,6 +61,7 @@ import { UsersModule } from './users/users.module';
       ],
     }),
     PrismaModule,
+    NotificationsModule,
     AuthModule,
     UsersModule,
     AddressesModule,

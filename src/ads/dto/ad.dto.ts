@@ -27,6 +27,12 @@ export class CreateAdDto {
   @MaxLength(2048)
   image_url: string;
 
+  /** Optional carousel video. The image_url is used as its poster. */
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  @MaxLength(2048)
+  video_url?: string;
+
   @IsOptional()
   @IsUrl({ require_tld: false })
   @MaxLength(2048)

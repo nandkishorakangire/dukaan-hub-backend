@@ -11,9 +11,21 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { createHash, createHmac, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  createPublicKey,
+  type JsonWebKey,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+  verify as verifySignature,
+} from 'node:crypto';
 import { JwtPayload } from '../common/types/authenticated-user';
+import { composeName } from '../common/utils/name';
 import { normalizePhone, phoneAccountEmail } from '../common/utils/phone';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicUser } from '../users/user.select';
 import { UsersService } from '../users/users.service';
@@ -22,6 +34,14 @@ import { LinkPhoneDto, RequestOtpDto, VerifyOtpDto } from './dto/otp.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SocialLoginDto } from './dto/social.dto';
+import { RequestVerificationDto, VerifyVerificationDto } from './dto/verification.dto';
+import {
+  normalizeVerificationTarget,
+  signVerificationToken,
+  VerificationChannel,
+  VerificationPurpose,
+  verifyVerificationToken,
+} from './verification-token';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -43,10 +63,11 @@ export interface OtpAuthResponse extends AuthResponse {
   needs_profile: boolean;
 }
 
-type OtpPurpose = 'signin' | 'profile' | 'reset';
+/** Existing sign-in/profile/reset purposes are unchanged; verification codes use their own prefix. */
+type OtpPurpose = 'signin' | 'profile' | 'reset' | `verify:${VerificationChannel}:${VerificationPurpose}`;
 
 type SocialProfile = {
-  provider: 'google' | 'facebook';
+  provider: 'google' | 'apple';
   subject: string;
   email: string;
   name: string;
@@ -65,19 +86,45 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
-    const email = dto.email.toLowerCase().trim();
+    const email = normalizeVerificationTarget('email', dto.email);
+    await verifyVerificationToken(this.jwt, this.config, dto.email_verification_token, {
+      target: email,
+      channel: 'email',
+      purpose: 'signup',
+    });
+
+    const phone = dto.phone ? normalizeVerificationTarget('phone', dto.phone) : undefined;
+    if (phone) {
+      if (!dto.phone_verification_token) {
+        throw new BadRequestException('A phone verification token is required when a phone number is supplied');
+      }
+      await verifyVerificationToken(this.jwt, this.config, dto.phone_verification_token, {
+        target: phone,
+        channel: 'phone',
+        purpose: 'signup',
+      });
+    }
+
     const existing = await this.users.findByEmail(email);
     if (existing) throw new ConflictException('An account with this email already exists');
 
     const password_hash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const user = await this.users.create({
-      name: dto.name,
+      name: composeName({
+        first_name: dto.first_name,
+        middle_name: dto.middle_name,
+        last_name: dto.last_name,
+      }),
+      first_name: dto.first_name,
+      middle_name: dto.middle_name,
+      last_name: dto.last_name,
       email,
       password_hash,
-      phone: dto.phone ? normalizePhone(dto.phone) : undefined,
+      phone,
     });
 
     return { user, ...(await this.issueTokens(user)) };
@@ -189,6 +236,8 @@ export class AuthService {
       },
     });
 
+    await this.notifications.sendSmsCode(phone, code);
+
     return {
       phone,
       purpose,
@@ -239,6 +288,61 @@ export class AuthService {
     }
 
     return this.users.setPhone(userId, phone);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Email / phone verification                                          */
+  /* ------------------------------------------------------------------ */
+
+  async requestVerification(dto: RequestVerificationDto) {
+    const target = this.verificationTarget(dto.channel, dto.target);
+    const purpose = this.verificationPurpose(dto.channel, dto.purpose);
+    const expiresIn = this.otpTtlSeconds();
+    const code = this.newOtpCode();
+
+    await this.prisma.otpCode.deleteMany({ where: { phone: target, purpose, consumed_at: null } });
+    await this.prisma.otpCode.create({
+      data: {
+        phone: target,
+        purpose,
+        code_hash: this.hashOtp(target, purpose, code),
+        expires_at: new Date(Date.now() + expiresIn * 1000),
+      },
+    });
+
+    if (dto.channel === 'email') {
+      await this.notifications.sendEmailCode(target, code, dto.purpose);
+    } else {
+      await this.notifications.sendSmsCode(target, code);
+    }
+
+    return {
+      target,
+      channel: dto.channel,
+      purpose: dto.purpose,
+      expires_in: expiresIn,
+      ...(this.exposeCodes() ? { code } : {}),
+    };
+  }
+
+  async verifyVerification(dto: VerifyVerificationDto) {
+    const target = this.verificationTarget(dto.channel, dto.target);
+    const purpose = this.verificationPurpose(dto.channel, dto.purpose);
+    await this.consumeOtp(target, purpose, dto.code);
+
+    const verification_token = await signVerificationToken(this.jwt, this.config, {
+      target,
+      channel: dto.channel,
+      purpose: dto.purpose,
+    });
+
+    return {
+      verified: true as const,
+      verification_token,
+      target,
+      channel: dto.channel,
+      purpose: dto.purpose,
+    };
   }
 
   /* ------------------------------------------------------------------ */
@@ -372,13 +476,10 @@ export class AuthService {
     if (dto.provider === 'google') {
       return this.verifyGoogle(dto.id_token);
     }
-    if (dto.provider === 'facebook') {
-      return this.verifyFacebook(dto.access_token);
+    if (dto.provider === 'apple') {
+      return this.verifyApple(dto.id_token, dto.full_name);
     }
-    const label = dto.provider === 'apple' ? 'Apple' : 'X';
-    throw new ServiceUnavailableException(
-      `${label} sign-in is not configured on this server. Use email or mobile instead.`,
-    );
+    throw new BadRequestException('Unsupported sign-in provider');
   }
 
   private async verifyGoogle(idToken?: string): Promise<SocialProfile> {
@@ -427,56 +528,87 @@ export class AuthService {
     };
   }
 
-  private async verifyFacebook(accessToken?: string): Promise<SocialProfile> {
-    const appId = this.config.get<string>('auth.facebookAppId');
-    const appSecret = this.config.get<string>('auth.facebookAppSecret');
-    if (!appId || !appSecret) {
+  /** Verifies an Apple identity token directly against Apple's public JWKS. */
+  private async verifyApple(idToken?: string, fullName?: string): Promise<SocialProfile> {
+    const clientId = this.config.get<string>('auth.appleClientId');
+    if (!clientId) {
       throw new ServiceUnavailableException(
-        'Facebook sign-in is not configured on this server. Use email or mobile instead.',
+        'Apple sign-in is not configured on this server. Use email or mobile instead.',
       );
     }
-    if (!accessToken) throw new BadRequestException('A Facebook access token is required');
+    if (!idToken) throw new BadRequestException('An Apple identity token is required');
+
+    const segments = idToken.split('.');
+    if (segments.length !== 3) {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
+    }
+
+    let header: { alg?: string; kid?: string };
+    let claims: {
+      iss?: string;
+      aud?: string;
+      exp?: number;
+      sub?: string;
+      email?: string;
+    };
+    try {
+      header = JSON.parse(Buffer.from(segments[0], 'base64url').toString('utf8')) as typeof header;
+      claims = JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8')) as typeof claims;
+    } catch {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
+    }
+    if (header.alg !== 'RS256' || !header.kid) {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
+    }
+
+    let keys: Array<{ kid?: string; kty?: string; n?: string; e?: string }>;
+    try {
+      const response = await fetch('https://appleid.apple.com/auth/keys');
+      if (!response.ok) throw new Error(`Apple responded ${response.status}`);
+      const jwks = (await response.json()) as { keys?: typeof keys };
+      keys = jwks.keys ?? [];
+    } catch {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
+    }
+
+    const jwk = keys.find((key) => key.kid === header.kid);
+    if (!jwk?.n || !jwk?.e) {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
+    }
 
     try {
-      const debugResponse = await fetch(
-        `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(
-          accessToken,
-        )}&access_token=${encodeURIComponent(`${appId}|${appSecret}`)}`,
+      const publicKey = createPublicKey({ key: jwk as JsonWebKey, format: 'jwk' });
+      const valid = verifySignature(
+        'RS256',
+        Buffer.from(`${segments[0]}.${segments[1]}`),
+        publicKey,
+        Buffer.from(segments[2], 'base64url'),
       );
-      const debug = (await debugResponse.json()) as {
-        data?: { app_id?: string; user_id?: string; is_valid?: boolean };
-      };
-      const info = debug.data;
-      if (!debugResponse.ok || !info?.is_valid || info.app_id !== appId || !info.user_id) {
-        throw new UnauthorizedException('Facebook could not verify this sign-in');
-      }
-
-      const profileResponse = await fetch(
-        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${encodeURIComponent(
-          accessToken,
-        )}`,
-      );
-      const profile = (await profileResponse.json()) as {
-        id?: string;
-        name?: string;
-        email?: string;
-        picture?: { data?: { url?: string } };
-      };
-      if (!profileResponse.ok || !profile.id) {
-        throw new UnauthorizedException('Facebook did not return a profile');
-      }
-
-      return {
-        provider: 'facebook',
-        subject: info.user_id,
-        email: (profile.email ?? `facebook.${info.user_id}@social.dukaanhub.local`).toLowerCase(),
-        name: profile.name?.trim() || 'Shopper',
-        avatarUrl: profile.picture?.data?.url ?? null,
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Facebook could not verify this sign-in');
+      if (!valid) throw new Error('Invalid Apple signature');
+    } catch {
+      throw new UnauthorizedException('Apple could not verify this sign-in');
     }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      claims.iss !== 'https://appleid.apple.com' ||
+      claims.aud !== clientId ||
+      typeof claims.exp !== 'number' ||
+      claims.exp <= now ||
+      !claims.sub ||
+      !claims.email
+    ) {
+      throw new UnauthorizedException('Apple did not return a valid identity token');
+    }
+
+    const email = claims.email.toLowerCase().trim();
+    return {
+      provider: 'apple',
+      subject: claims.sub,
+      email,
+      name: fullName?.trim() || email.split('@')[0],
+      avatarUrl: null,
+    };
   }
 
   /* ------------------------------------------------------------------ */
@@ -509,6 +641,29 @@ export class AuthService {
       where: { id: record.id },
       data: { consumed_at: new Date(), attempts: { increment: 1 } },
     });
+  }
+
+  private verificationTarget(channel: VerificationChannel, target: string): string {
+    if (channel === 'phone') {
+      const phone = normalizeVerificationTarget('phone', target);
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        throw new BadRequestException('Enter a valid 10-digit mobile number');
+      }
+      return phone;
+    }
+
+    const email = normalizeVerificationTarget('email', target);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Enter a valid email address');
+    }
+    return email;
+  }
+
+  private verificationPurpose(
+    channel: VerificationChannel,
+    purpose: VerificationPurpose,
+  ): `verify:${VerificationChannel}:${VerificationPurpose}` {
+    return `verify:${channel}:${purpose}`;
   }
 
   private newOtpCode(): string {

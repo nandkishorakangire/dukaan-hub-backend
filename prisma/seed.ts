@@ -13,6 +13,19 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 const DEMO_PASSWORD = 'Password123!';
 
+/**
+ * Short public clips used as relatable placeholders for carousel video playback.
+ * These hosts serve browser-playable MP4s; the old Google sample bucket returned
+ * 403 / ERR_BLOCKED_BY_ORB in the web app.
+ */
+const DEMO_CAROUSEL_VIDEOS = {
+  storeTour: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  productPick: 'https://www.w3schools.com/html/mov_bbb.mp4',
+  dealReel: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  bakeryPick: 'https://www.w3schools.com/html/mov_bbb.mp4',
+  homeTour: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+};
+
 type ProductSeed = {
   name: string;
   description?: string;
@@ -34,6 +47,7 @@ type BusinessSeed = {
   logo_url: string;
   banner_url: string;
   images: string[];
+  videos?: string[];
   amenities: string[];
   category: string;
   address: string;
@@ -253,6 +267,7 @@ const BUSINESSES: BusinessSeed[] = [
       'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800',
       'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800',
     ],
+    videos: [DEMO_CAROUSEL_VIDEOS.storeTour],
     amenities: ['Free delivery', 'Cash on delivery', 'Same-day delivery'],
     category: 'Grocery',
     address: 'Sector 12, Noida',
@@ -303,7 +318,7 @@ const BUSINESSES: BusinessSeed[] = [
         category: 'beverages',
       },
       {
-        name: 'Sugar 1kg',
+        name: 'Watermelon 1kg',
         price: 48,
         stock_quantity: 100,
         image_url: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400',
@@ -318,12 +333,13 @@ const BUSINESSES: BusinessSeed[] = [
     ownerEmail: 'seller2@dukaanhub.local',
     name: 'Trendy Threads Boutique',
     description: 'Ethnic and western wear for women.',
-    logo_url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba6977c6?w=200',
-    banner_url: 'https://images.unsplash.com/photo-1441984904996-e0b6ba6977c6?w=800',
+    logo_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200',
+    banner_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
     images: [
-      'https://images.unsplash.com/photo-1441984904996-e0b6ba6977c6?w=800',
+      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
       'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800',
     ],
+    videos: [DEMO_CAROUSEL_VIDEOS.productPick],
     amenities: ['Doorstep delivery', 'Easy returns', 'Paid delivery'],
     category: 'Fashion',
     address: 'Lajpat Nagar, Delhi',
@@ -341,7 +357,7 @@ const BUSINESSES: BusinessSeed[] = [
         price: 899,
         mrp: 1299,
         stock_quantity: 20,
-        image_url: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=400',
+        image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400',
         image_bg_color: '#C9A7A0',
         category: 'ethnic-wear',
       },
@@ -376,6 +392,7 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200',
     banner_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800',
     images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800'],
+    videos: [DEMO_CAROUSEL_VIDEOS.dealReel],
     amenities: ['Warranty provided', 'Installation support', 'Cash on delivery'],
     category: 'Electronics',
     address: 'Gurugram',
@@ -418,6 +435,7 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200',
     banner_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800',
     images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800'],
+    videos: [DEMO_CAROUSEL_VIDEOS.bakeryPick],
     amenities: ['Same-day delivery', 'Cash on delivery'],
     category: 'Food',
     address: 'Indirapuram',
@@ -461,6 +479,7 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=200',
     banner_url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800',
     images: ['https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800'],
+    videos: [DEMO_CAROUSEL_VIDEOS.homeTour],
     amenities: ['Wholesaler discount', 'Bulk vending only', 'Paid delivery'],
     category: 'Home',
     address: 'Connaught Place',
@@ -494,6 +513,7 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200',
     banner_url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800',
     images: ['https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800'],
+    videos: [DEMO_CAROUSEL_VIDEOS.dealReel],
     amenities: ['Free delivery', 'Cash on delivery'],
     category: 'Health',
     address: 'Sector 62, Noida',
@@ -630,6 +650,7 @@ async function seed(): Promise<void> {
       logo_url: seedBusiness.logo_url,
       banner_url: seedBusiness.banner_url,
       images: seedBusiness.images,
+      videos: seedBusiness.videos ?? [],
       amenities: seedBusiness.amenities,
       category: seedBusiness.category,
       address: seedBusiness.address,
@@ -737,6 +758,7 @@ async function seed(): Promise<void> {
     businessSlug?: string;
     title: string;
     image_url: string;
+    video_url?: string;
     link_url?: string;
     placement: AdPlacement;
   }[] = [
@@ -744,6 +766,7 @@ async function seed(): Promise<void> {
       businessSlug: 'sharma-kirana',
       title: 'Fresh groceries in 30 minutes',
       image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+      video_url: DEMO_CAROUSEL_VIDEOS.storeTour,
       link_url: '/business/sharma-kirana',
       placement: AdPlacement.home,
     },
@@ -751,6 +774,7 @@ async function seed(): Promise<void> {
       businessSlug: 'freshbake',
       title: 'Same-day cakes & bakes',
       image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
+      video_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
       link_url: '/business/freshbake',
       placement: AdPlacement.carousel,
     },
@@ -758,6 +782,7 @@ async function seed(): Promise<void> {
       businessSlug: 'techzone',
       title: 'Latest audio deals',
       image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
+      video_url: DEMO_CAROUSEL_VIDEOS.dealReel,
       link_url: '/business/techzone',
       placement: AdPlacement.search,
     },
@@ -777,12 +802,19 @@ async function seed(): Promise<void> {
           business_id: business?.id ?? null,
           title: ad.title,
           image_url: ad.image_url,
+          video_url: ad.video_url,
           link_url: ad.link_url,
           placement: ad.placement,
           starts_at: now,
           ends_at: inThirtyDays,
           is_active: true,
         },
+      });
+    } else if (ad.video_url) {
+      // Existing demo ads should also pick up the new video after re-seeding.
+      await prisma.ad.update({
+        where: { id: existing.id },
+        data: { video_url: ad.video_url },
       });
     }
   }

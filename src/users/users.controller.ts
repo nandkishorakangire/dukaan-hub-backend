@@ -42,9 +42,11 @@ export class UsersController {
   }
 
   @Post('me/email-change')
-  @ApiOperation({ summary: 'Request an email change; a DukaanHub admin must approve it' })
+  @ApiOperation({
+    summary: 'Request an email change with a verified address; a DukaanHub admin must approve it',
+  })
   requestEmailChange(@CurrentUser('id') userId: string, @Body() dto: RequestEmailChangeDto) {
-    return this.users.requestEmailChange(userId, dto.email);
+    return this.users.requestEmailChange(userId, dto.email, dto.verification_token);
   }
 }
 
