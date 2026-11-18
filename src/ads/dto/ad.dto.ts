@@ -3,6 +3,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -32,6 +33,11 @@ export class CreateAdDto {
   @IsUrl({ require_tld: false })
   @MaxLength(2048)
   video_url?: string;
+
+  /** Landscape/portrait hint for fullscreen. Probed from the video when omitted. */
+  @IsOptional()
+  @IsIn(['landscape', 'portrait'])
+  video_orientation?: 'landscape' | 'portrait';
 
   @IsOptional()
   @IsUrl({ require_tld: false })

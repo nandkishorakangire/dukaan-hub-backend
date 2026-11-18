@@ -183,6 +183,8 @@ model Business {
   banner_url                String?
   images                    String[] @default([])
   videos                    String[] @default([])
+  /// Orientation per video URL ('landscape' | 'portrait'); empty entries auto-detect.
+  video_orientations        String[] @default([])
   amenities                 String[] @default([])
   category                  String?
   address                   String?
@@ -443,6 +445,8 @@ model Ad {
   title              String
   image_url          String
   video_url          String?
+  /// 'landscape' | 'portrait'; probed from the video when left unset.
+  video_orientation  String?
   link_url           String?
   sort_order         Int         @default(0)
   duration_ms        Int?

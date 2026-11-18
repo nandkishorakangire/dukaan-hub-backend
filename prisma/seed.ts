@@ -50,6 +50,7 @@ type BusinessSeed = {
   banner_url: string;
   images: string[];
   videos?: string[];
+  video_orientations?: ('landscape' | 'portrait' | '')[];
   amenities: string[];
   category: string;
   address: string;
@@ -305,6 +306,7 @@ const BUSINESSES: BusinessSeed[] = [
       'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800',
     ],
     videos: [SHARMA_KIRANA_VIDEO],
+    video_orientations: ['landscape'],
     amenities: ['Free delivery', 'Cash on delivery', 'Same-day delivery'],
     category: 'Grocery',
     address: 'Sector 12, Noida',
@@ -691,6 +693,7 @@ async function seed(): Promise<void> {
       banner_url: seedBusiness.banner_url,
       images: seedBusiness.images,
       videos: seedBusiness.videos ?? [],
+      video_orientations: seedBusiness.video_orientations ?? [],
       amenities: seedBusiness.amenities,
       category: seedBusiness.category,
       address: seedBusiness.address,
@@ -799,6 +802,7 @@ async function seed(): Promise<void> {
     title: string;
     image_url: string;
     video_url?: string;
+    video_orientation?: 'landscape' | 'portrait';
     link_url?: string;
     sort_order: number;
     duration_ms?: number;
@@ -812,6 +816,7 @@ async function seed(): Promise<void> {
       title: 'Fresh groceries in 30 minutes',
       image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.storeTour,
+      video_orientation: 'landscape',
       link_url: '/business/sharma-kirana',
       sort_order: 1,
       // Status-style ad: starts paused each visit, audio on, no mute button.
@@ -826,6 +831,7 @@ async function seed(): Promise<void> {
       title: 'Same-day cakes & bakes',
       image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
+      video_orientation: 'landscape',
       link_url: '/business/freshbake',
       sort_order: 2,
       pausable: true,
@@ -838,6 +844,7 @@ async function seed(): Promise<void> {
       title: 'Latest audio deals',
       image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.dealReel,
+      video_orientation: 'landscape',
       link_url: '/business/techzone',
       sort_order: 3,
     },
@@ -862,6 +869,7 @@ async function seed(): Promise<void> {
       title: ad.title,
       image_url: ad.image_url,
       video_url: ad.video_url ?? null,
+      video_orientation: ad.video_orientation ?? null,
       link_url: linkUrl,
       sort_order: ad.sort_order,
       duration_ms: ad.duration_ms ?? null,

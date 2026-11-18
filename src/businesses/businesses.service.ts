@@ -6,6 +6,7 @@ import {
 import { Prisma, Role } from '@prisma/client';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { uniqueSlug } from '../common/utils/slug';
+import { resolveVideoOrientations } from '../common/utils/video-orientation';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -98,6 +99,9 @@ export class BusinessesService {
       return Boolean(existing);
     });
 
+    const videos = dto.videos ?? [];
+    const orientations = await resolveVideoOrientations(videos, dto.video_orientations);
+
     const business = await this.prisma.business.create({
       data: {
         owner_id: ownerId,
@@ -107,7 +111,8 @@ export class BusinessesService {
         logo_url: dto.logo_url,
         banner_url: dto.banner_url,
         images: dto.images ?? [],
-        videos: dto.videos ?? [],
+        videos,
+        video_orientations: orientations.map((orientation) => orientation ?? ''),
         amenities: dto.amenities ?? [],
         category: dto.category,
         address: dto.address,
@@ -154,6 +159,13 @@ export class BusinessesService {
       });
     }
 
+    let videoOrientations: string[] | undefined;
+    if (dto.videos !== undefined || dto.video_orientations !== undefined) {
+      const urls = dto.videos ?? business.videos;
+      const resolved = await resolveVideoOrientations(urls, dto.video_orientations);
+      videoOrientations = resolved.map((orientation) => orientation ?? '');
+    }
+
     return this.prisma.business.update({
       where: { id },
       data: {
@@ -164,6 +176,7 @@ export class BusinessesService {
         ...(dto.banner_url !== undefined ? { banner_url: dto.banner_url } : {}),
         ...(dto.images !== undefined ? { images: dto.images } : {}),
         ...(dto.videos !== undefined ? { videos: dto.videos } : {}),
+        ...(videoOrientations !== undefined ? { video_orientations: videoOrientations } : {}),
         ...(dto.amenities !== undefined ? { amenities: dto.amenities } : {}),
         ...(dto.category !== undefined ? { category: dto.category } : {}),
         ...(dto.address !== undefined ? { address: dto.address } : {}),

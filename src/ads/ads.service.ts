@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { BusinessesService } from '../businesses/businesses.service';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
+import { probeVideoOrientation } from '../common/utils/video-orientation';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdDto, ListAdsQueryDto, UpdateAdDto } from './dto/ad.dto';
 
@@ -74,6 +75,8 @@ export class AdsService {
         title: dto.title.trim(),
         image_url: dto.image_url,
         video_url: dto.video_url,
+        video_orientation:
+          dto.video_orientation ?? (await probeVideoOrientation(dto.video_url)),
         link_url: dto.link_url,
         sort_order: dto.sort_order ?? 0,
         duration_ms: dto.duration_ms ?? null,
@@ -101,12 +104,18 @@ export class AdsService {
       dto.ends_at ?? ad.ends_at?.toISOString(),
     );
 
+    const videoChanged = dto.video_url !== undefined && dto.video_url !== ad.video_url;
+    const probedOrientation = videoChanged ? await probeVideoOrientation(dto.video_url) : null;
+    const nextOrientation =
+      dto.video_orientation ?? probedOrientation ?? (videoChanged ? null : undefined);
+
     return this.prisma.ad.update({
       where: { id },
       data: {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
         ...(dto.image_url !== undefined ? { image_url: dto.image_url } : {}),
         ...(dto.video_url !== undefined ? { video_url: dto.video_url } : {}),
+        ...(nextOrientation !== undefined ? { video_orientation: nextOrientation } : {}),
         ...(dto.link_url !== undefined ? { link_url: dto.link_url } : {}),
         ...(dto.sort_order !== undefined ? { sort_order: dto.sort_order } : {}),
         ...(dto.duration_ms !== undefined ? { duration_ms: dto.duration_ms } : {}),

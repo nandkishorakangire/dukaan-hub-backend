@@ -73,6 +73,12 @@ export class CreateBusinessDto {
   @IsUrl({ require_tld: false }, { each: true })
   videos?: string[];
 
+  /** Orientation per video URL; empty entries are probed from the video. */
+  @IsOptional()
+  @IsArray()
+  @IsIn(['landscape', 'portrait', ''], { each: true })
+  video_orientations?: ('' | 'landscape' | 'portrait')[];
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
