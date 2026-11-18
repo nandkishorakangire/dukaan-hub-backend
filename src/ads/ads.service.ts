@@ -24,12 +24,11 @@ export class AdsService {
     private readonly businesses: BusinessesService,
   ) {}
 
-  /** Ads that are currently live, for app placements. */
+  /** Ads that are currently live. */
   async listPublic(query: ListAdsQueryDto): Promise<PaginatedResult<AdWithBusiness>> {
     const now = new Date();
     const where: Prisma.AdWhereInput = {
       is_active: true,
-      ...(query.placement ? { placement: query.placement } : {}),
       ...(query.business_id ? { business_id: query.business_id } : {}),
       AND: [
         { OR: [{ starts_at: null }, { starts_at: { lte: now } }] },
@@ -47,7 +46,6 @@ export class AdsService {
   ): Promise<PaginatedResult<AdWithBusiness>> {
     const where: Prisma.AdWhereInput = {
       ...(isAdmin(user) ? {} : { business: { owner_id: user.id } }),
-      ...(query.placement ? { placement: query.placement } : {}),
       ...(query.business_id ? { business_id: query.business_id } : {}),
       ...(query.active !== undefined ? { is_active: query.active } : {}),
     };
@@ -77,7 +75,12 @@ export class AdsService {
         image_url: dto.image_url,
         video_url: dto.video_url,
         link_url: dto.link_url,
-        placement: dto.placement,
+        sort_order: dto.sort_order ?? 0,
+        duration_ms: dto.duration_ms ?? null,
+        pausable: dto.pausable ?? true,
+        auto_play: dto.auto_play ?? true,
+        show_sound_control: dto.show_sound_control ?? true,
+        muted: dto.muted ?? true,
         starts_at: dto.starts_at ? new Date(dto.starts_at) : null,
         ends_at: dto.ends_at ? new Date(dto.ends_at) : null,
         is_active: dto.is_active ?? true,
@@ -105,7 +108,14 @@ export class AdsService {
         ...(dto.image_url !== undefined ? { image_url: dto.image_url } : {}),
         ...(dto.video_url !== undefined ? { video_url: dto.video_url } : {}),
         ...(dto.link_url !== undefined ? { link_url: dto.link_url } : {}),
-        ...(dto.placement !== undefined ? { placement: dto.placement } : {}),
+        ...(dto.sort_order !== undefined ? { sort_order: dto.sort_order } : {}),
+        ...(dto.duration_ms !== undefined ? { duration_ms: dto.duration_ms } : {}),
+        ...(dto.pausable !== undefined ? { pausable: dto.pausable } : {}),
+        ...(dto.auto_play !== undefined ? { auto_play: dto.auto_play } : {}),
+        ...(dto.show_sound_control !== undefined
+          ? { show_sound_control: dto.show_sound_control }
+          : {}),
+        ...(dto.muted !== undefined ? { muted: dto.muted } : {}),
         ...(dto.starts_at !== undefined
           ? { starts_at: dto.starts_at ? new Date(dto.starts_at) : null }
           : {}),
@@ -133,7 +143,7 @@ export class AdsService {
       this.prisma.ad.findMany({
         where,
         include: adInclude,
-        orderBy: [{ created_at: 'desc' }],
+        orderBy: [{ sort_order: 'asc' }, { created_at: 'desc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),

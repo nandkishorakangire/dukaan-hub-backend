@@ -63,13 +63,6 @@ enum DeliverySpeed {
   fast
 }
 
-enum AdPlacement {
-  home
-  business
-  search
-  carousel
-}
-
 enum ChatSender {
   buyer
   seller
@@ -445,22 +438,27 @@ model BusinessPage {
 }
 
 model Ad {
-  id          String      @id @default(uuid()) @db.Uuid
-  business_id String?     @db.Uuid
-  title       String
-  image_url   String
-  video_url   String?
-  link_url    String?
-  placement   AdPlacement
-  starts_at   DateTime?
-  ends_at     DateTime?
-  is_active   Boolean     @default(true)
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+  id                 String      @id @default(uuid()) @db.Uuid
+  business_id        String?     @db.Uuid
+  title              String
+  image_url          String
+  video_url          String?
+  link_url           String?
+  sort_order         Int         @default(0)
+  duration_ms        Int?
+  pausable           Boolean     @default(true)
+  auto_play          Boolean     @default(true)
+  show_sound_control Boolean     @default(true)
+  muted              Boolean     @default(true)
+  starts_at          DateTime?
+  ends_at            DateTime?
+  is_active          Boolean     @default(true)
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
 
   business Business? @relation(fields: [business_id], references: [id], onDelete: Cascade)
 
-  @@index([placement, is_active])
+  @@index([is_active, sort_order])
   @@index([business_id])
   @@map("ads")
 }

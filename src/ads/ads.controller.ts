@@ -23,7 +23,7 @@ export class AdsController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'List live ads, optionally filtered by placement or storefront' })
+  @ApiOperation({ summary: 'List live ads, optionally filtered by storefront' })
   list(@Query() query: ListAdsQueryDto) {
     return this.ads.listPublic(query);
   }

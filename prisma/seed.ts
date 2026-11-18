@@ -1,5 +1,4 @@
 import {
-  AdPlacement,
   CouponType,
   OrderStatus,
   PaymentMode,
@@ -801,7 +800,12 @@ async function seed(): Promise<void> {
     image_url: string;
     video_url?: string;
     link_url?: string;
-    placement: AdPlacement;
+    sort_order: number;
+    duration_ms?: number;
+    pausable?: boolean;
+    auto_play?: boolean;
+    show_sound_control?: boolean;
+    muted?: boolean;
   }[] = [
     {
       businessSlug: 'sharma-kirana',
@@ -809,7 +813,13 @@ async function seed(): Promise<void> {
       image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.storeTour,
       link_url: '/business/sharma-kirana',
-      placement: AdPlacement.home,
+      sort_order: 1,
+      // Status-style ad: starts paused each visit, audio on, no mute button.
+      duration_ms: 15000,
+      pausable: true,
+      auto_play: false,
+      show_sound_control: false,
+      muted: false,
     },
     {
       businessSlug: 'freshbake',
@@ -817,7 +827,11 @@ async function seed(): Promise<void> {
       image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
       link_url: '/business/freshbake',
-      placement: AdPlacement.carousel,
+      sort_order: 2,
+      pausable: true,
+      auto_play: true,
+      show_sound_control: true,
+      muted: true,
     },
     {
       businessSlug: 'techzone',
@@ -825,7 +839,7 @@ async function seed(): Promise<void> {
       image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
       video_url: DEMO_CAROUSEL_VIDEOS.dealReel,
       link_url: '/business/techzone',
-      placement: AdPlacement.search,
+      sort_order: 3,
     },
   ];
 
@@ -837,26 +851,33 @@ async function seed(): Promise<void> {
       where: { title: ad.title, business_id: business?.id ?? null },
       select: { id: true },
     });
+    // Demo link URLs use the business slug in the seed; store the id so the
+    // client can open /business/[id] directly.
+    const linkUrl =
+      ad.link_url && business
+        ? ad.link_url.replace(/\/business\/[^/]+$/, `/business/${business.id}`)
+        : ad.link_url ?? null;
+    const data = {
+      business_id: business?.id ?? null,
+      title: ad.title,
+      image_url: ad.image_url,
+      video_url: ad.video_url ?? null,
+      link_url: linkUrl,
+      sort_order: ad.sort_order,
+      duration_ms: ad.duration_ms ?? null,
+      pausable: ad.pausable ?? true,
+      auto_play: ad.auto_play ?? true,
+      show_sound_control: ad.show_sound_control ?? true,
+      muted: ad.muted ?? true,
+      starts_at: now,
+      ends_at: inThirtyDays,
+      is_active: true,
+    };
     if (!existing) {
-      await prisma.ad.create({
-        data: {
-          business_id: business?.id ?? null,
-          title: ad.title,
-          image_url: ad.image_url,
-          video_url: ad.video_url,
-          link_url: ad.link_url,
-          placement: ad.placement,
-          starts_at: now,
-          ends_at: inThirtyDays,
-          is_active: true,
-        },
-      });
-    } else if (ad.video_url) {
-      // Existing demo ads should also pick up the new video after re-seeding.
-      await prisma.ad.update({
-        where: { id: existing.id },
-        data: { video_url: ad.video_url },
-      });
+      await prisma.ad.create({ data });
+    } else {
+      // Re-seeding refreshes URLs and playback settings for demo ads.
+      await prisma.ad.update({ where: { id: existing.id }, data });
     }
   }
 

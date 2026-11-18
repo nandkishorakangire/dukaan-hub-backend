@@ -1,16 +1,16 @@
 import { PartialType, OmitType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
-  IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsUrl,
   IsUUID,
   MaxLength,
+  Min,
 } from 'class-validator';
-import { AdPlacement } from '@prisma/client';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 
 export class CreateAdDto {
@@ -38,8 +38,34 @@ export class CreateAdDto {
   @MaxLength(2048)
   link_url?: string;
 
-  @IsEnum(AdPlacement)
-  placement: AdPlacement;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sort_order?: number;
+
+  /** Status-style fallback timer for an image or a video awaiting first tap. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(500)
+  duration_ms?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  pausable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_play?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  show_sound_control?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  muted?: boolean;
 
   @IsOptional()
   @IsDateString()
@@ -57,10 +83,6 @@ export class CreateAdDto {
 export class UpdateAdDto extends PartialType(OmitType(CreateAdDto, ['business_id'] as const)) {}
 
 export class ListAdsQueryDto extends PaginationQueryDto {
-  @IsOptional()
-  @IsEnum(AdPlacement)
-  placement?: AdPlacement;
-
   @IsOptional()
   @IsUUID()
   business_id?: string;
