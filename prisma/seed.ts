@@ -26,6 +26,9 @@ const DEMO_CAROUSEL_VIDEOS = {
   homeTour: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
 };
 
+/** Kept only on Sharma Kirana Store's business carousel; stored in the DB. */
+const SHARMA_KIRANA_VIDEO = DEMO_CAROUSEL_VIDEOS.storeTour;
+
 type ProductSeed = {
   name: string;
   description?: string;
@@ -133,123 +136,158 @@ const CATEGORIES: {
   name: string;
   slug: string;
   icon: string;
+  emoji: string;
   sort_order: number;
-  children?: { name: string; slug: string; icon: string; sort_order: number }[];
+  children?: {
+    name: string;
+    slug: string;
+    icon: string;
+    emoji: string;
+    sort_order: number;
+  }[];
 }[] = [
   {
     name: 'Grocery',
     slug: 'grocery',
     icon: 'basket',
+    emoji: '🛒',
     sort_order: 1,
     children: [
-      { name: 'Rice & Grains', slug: 'rice-grains', icon: 'rice', sort_order: 1 },
-      { name: 'Oils', slug: 'oils', icon: 'oil', sort_order: 2 },
-      { name: 'Beverages', slug: 'beverages', icon: 'cup', sort_order: 3 },
-      { name: 'Dairy & Bakery', slug: 'dairy-bakery', icon: 'milk', sort_order: 4 },
-      { name: 'Snacks', slug: 'snacks', icon: 'chip', sort_order: 5 },
-      { name: 'Fruits & Vegetables', slug: 'fruits-vegetables', icon: 'carrot', sort_order: 6 },
-      { name: 'Household', slug: 'household', icon: 'box', sort_order: 7 },
+      { name: 'Rice & Grains', slug: 'rice-grains', icon: 'rice', emoji: '🌾', sort_order: 1 },
+      { name: 'Oils', slug: 'oils', icon: 'oil', emoji: '🫒', sort_order: 2 },
+      { name: 'Beverages', slug: 'beverages', icon: 'cup', emoji: '🥤', sort_order: 3 },
+      { name: 'Dairy & Bakery', slug: 'dairy-bakery', icon: 'milk', emoji: '🥛', sort_order: 4 },
+      { name: 'Snacks', slug: 'snacks', icon: 'chip', emoji: '🍪', sort_order: 5 },
+      {
+        name: 'Fruits & Vegetables',
+        slug: 'fruits-vegetables',
+        icon: 'carrot',
+        emoji: '🥕',
+        sort_order: 6,
+      },
+      { name: 'Household', slug: 'household', icon: 'box', emoji: '🧴', sort_order: 7 },
     ],
   },
   {
     name: 'Fashion',
     slug: 'fashion',
     icon: 'shirt',
+    emoji: '👗',
     sort_order: 2,
     children: [
-      { name: 'Ethnic Wear', slug: 'ethnic-wear', icon: 'dress', sort_order: 1 },
-      { name: 'Western Wear', slug: 'western-wear', icon: 'tshirt', sort_order: 2 },
-      { name: 'Footwear', slug: 'footwear', icon: 'shoe', sort_order: 3 },
-      { name: 'Bags & Accessories', slug: 'bags-accessories', icon: 'bag', sort_order: 4 },
-      { name: 'Jewellery', slug: 'jewellery', icon: 'gem', sort_order: 5 },
+      { name: 'Ethnic Wear', slug: 'ethnic-wear', icon: 'dress', emoji: '👗', sort_order: 1 },
+      { name: 'Bags', slug: 'bags', icon: 'bag', emoji: '🏷️', sort_order: 2 },
+      { name: 'Western Wear', slug: 'western-wear', icon: 'tshirt', emoji: '👚', sort_order: 3 },
+      { name: 'Footwear', slug: 'footwear', icon: 'shoe', emoji: '👟', sort_order: 4 },
+      {
+        name: 'Bags & Accessories',
+        slug: 'bags-accessories',
+        icon: 'bag',
+        emoji: '👜',
+        sort_order: 5,
+      },
+      { name: 'Jewellery', slug: 'jewellery', icon: 'gem', emoji: '💍', sort_order: 6 },
     ],
   },
   {
     name: 'Electronics',
     slug: 'electronics',
     icon: 'phone',
+    emoji: '📱',
     sort_order: 3,
     children: [
-      { name: 'Audio', slug: 'audio', icon: 'headphones', sort_order: 1 },
-      { name: 'Accessories', slug: 'accessories', icon: 'cable', sort_order: 2 },
-      { name: 'Mobiles', slug: 'mobiles', icon: 'phone', sort_order: 3 },
-      { name: 'Computers', slug: 'computers', icon: 'laptop', sort_order: 4 },
-      { name: 'Home Appliances', slug: 'home-appliances', icon: 'plug', sort_order: 5 },
+      { name: 'Audio', slug: 'audio', icon: 'headphones', emoji: '🎧', sort_order: 1 },
+      { name: 'Accessories', slug: 'accessories', icon: 'cable', emoji: '🔌', sort_order: 2 },
+      { name: 'Mobiles', slug: 'mobiles', icon: 'phone', emoji: '📱', sort_order: 3 },
+      { name: 'Computers', slug: 'computers', icon: 'laptop', emoji: '💻', sort_order: 4 },
+      {
+        name: 'Home Appliances',
+        slug: 'home-appliances',
+        icon: 'plug',
+        emoji: '🧺',
+        sort_order: 5,
+      },
     ],
   },
   {
     name: 'Food',
     slug: 'food',
     icon: 'cake',
+    emoji: '🍔',
     sort_order: 4,
     children: [
-      { name: 'Cakes', slug: 'cakes', icon: 'cake', sort_order: 1 },
-      { name: 'Bakery', slug: 'bakery', icon: 'bread', sort_order: 2 },
-      { name: 'Meals', slug: 'meals', icon: 'utensils', sort_order: 3 },
-      { name: 'Snacks', slug: 'snacks-food', icon: 'chip', sort_order: 4 },
-      { name: 'Beverages', slug: 'beverages-food', icon: 'cup', sort_order: 5 },
+      { name: 'Cakes', slug: 'cakes', icon: 'cake', emoji: '🎂', sort_order: 1 },
+      { name: 'Bakery', slug: 'bakery', icon: 'bread', emoji: '🥐', sort_order: 2 },
+      { name: 'Meals', slug: 'meals', icon: 'utensils', emoji: '🍽️', sort_order: 3 },
+      { name: 'Snacks', slug: 'snacks-food', icon: 'chip', emoji: '🍪', sort_order: 4 },
+      { name: 'Beverages', slug: 'beverages-food', icon: 'cup', emoji: '🥤', sort_order: 5 },
     ],
   },
   {
     name: 'Home',
     slug: 'home',
     icon: 'home',
+    emoji: '🏠',
     sort_order: 5,
     children: [
-      { name: 'Furniture', slug: 'furniture', icon: 'couch', sort_order: 1 },
-      { name: 'Decor', slug: 'decor', icon: 'lamp', sort_order: 2 },
-      { name: 'Kitchen', slug: 'kitchen', icon: 'pan', sort_order: 3 },
-      { name: 'Bedding', slug: 'bedding', icon: 'bed', sort_order: 4 },
-      { name: 'Lighting', slug: 'lighting', icon: 'lightbulb', sort_order: 5 },
+      { name: 'Furniture', slug: 'furniture', icon: 'couch', emoji: '🪑', sort_order: 1 },
+      { name: 'Decor', slug: 'decor', icon: 'lamp', emoji: '🖼️', sort_order: 2 },
+      { name: 'Kitchen', slug: 'kitchen', icon: 'pan', emoji: '🍳', sort_order: 3 },
+      { name: 'Bedding', slug: 'bedding', icon: 'bed', emoji: '🛏️', sort_order: 4 },
+      { name: 'Lighting', slug: 'lighting', icon: 'lightbulb', emoji: '💡', sort_order: 5 },
     ],
   },
   {
     name: 'Health',
     slug: 'health',
     icon: 'heart',
+    emoji: '💊',
     sort_order: 6,
     children: [
-      { name: 'Protein', slug: 'protein', icon: 'dumbbell', sort_order: 1 },
-      { name: 'Medicines', slug: 'medicines', icon: 'pill', sort_order: 2 },
-      { name: 'Wellness', slug: 'wellness', icon: 'leaf', sort_order: 3 },
-      { name: 'Personal Care', slug: 'personal-care', icon: 'brush', sort_order: 4 },
-      { name: 'Fitness', slug: 'fitness', icon: 'barbell', sort_order: 5 },
+      { name: 'Protein', slug: 'protein', icon: 'dumbbell', emoji: '💪', sort_order: 1 },
+      { name: 'Medicines', slug: 'medicines', icon: 'pill', emoji: '💊', sort_order: 2 },
+      { name: 'Wellness', slug: 'wellness', icon: 'leaf', emoji: '🌿', sort_order: 3 },
+      { name: 'Personal Care', slug: 'personal-care', icon: 'brush', emoji: '🧼', sort_order: 4 },
+      { name: 'Fitness', slug: 'fitness', icon: 'barbell', emoji: '🏋️', sort_order: 5 },
     ],
   },
   {
     name: 'Beauty',
     slug: 'beauty',
     icon: 'lipstick',
+    emoji: '💄',
     sort_order: 7,
     children: [
-      { name: 'Skincare', slug: 'skincare', icon: 'face', sort_order: 1 },
-      { name: 'Makeup', slug: 'makeup', icon: 'palette', sort_order: 2 },
-      { name: 'Haircare', slug: 'haircare', icon: 'hair', sort_order: 3 },
-      { name: 'Fragrances', slug: 'fragrances', icon: 'spray', sort_order: 4 },
+      { name: 'Skincare', slug: 'skincare', icon: 'face', emoji: '🧴', sort_order: 1 },
+      { name: 'Makeup', slug: 'makeup', icon: 'palette', emoji: '💄', sort_order: 2 },
+      { name: 'Haircare', slug: 'haircare', icon: 'hair', emoji: '💇', sort_order: 3 },
+      { name: 'Fragrances', slug: 'fragrances', icon: 'spray', emoji: '🌸', sort_order: 4 },
     ],
   },
   {
     name: 'Stationery',
     slug: 'stationery',
     icon: 'notebook',
+    emoji: '✏️',
     sort_order: 8,
     children: [
-      { name: 'Notebooks', slug: 'notebooks', icon: 'notebook', sort_order: 1 },
-      { name: 'Pens & Pencils', slug: 'pens-pencils', icon: 'pen', sort_order: 2 },
-      { name: 'Office Supplies', slug: 'office-supplies', icon: 'folder', sort_order: 3 },
-      { name: 'Art Supplies', slug: 'art-supplies', icon: 'palette', sort_order: 4 },
+      { name: 'Notebooks', slug: 'notebooks', icon: 'notebook', emoji: '📓', sort_order: 1 },
+      { name: 'Pens & Pencils', slug: 'pens-pencils', icon: 'pen', emoji: '✏️', sort_order: 2 },
+      { name: 'Office Supplies', slug: 'office-supplies', icon: 'folder', emoji: '📎', sort_order: 3 },
+      { name: 'Art Supplies', slug: 'art-supplies', icon: 'palette', emoji: '🎨', sort_order: 4 },
     ],
   },
   {
     name: 'Services',
     slug: 'services',
     icon: 'tools',
+    emoji: '🛠️',
     sort_order: 9,
     children: [
-      { name: 'Repairs', slug: 'repairs', icon: 'wrench', sort_order: 1 },
-      { name: 'Cleaning', slug: 'cleaning', icon: 'mop', sort_order: 2 },
-      { name: 'Delivery', slug: 'delivery', icon: 'truck', sort_order: 3 },
-      { name: 'Consulting', slug: 'consulting', icon: 'graduation-cap', sort_order: 4 },
+      { name: 'Repairs', slug: 'repairs', icon: 'wrench', emoji: '🔧', sort_order: 1 },
+      { name: 'Cleaning', slug: 'cleaning', icon: 'mop', emoji: '🧹', sort_order: 2 },
+      { name: 'Delivery', slug: 'delivery', icon: 'truck', emoji: '🚚', sort_order: 3 },
+      { name: 'Consulting', slug: 'consulting', icon: 'graduation-cap', emoji: '🤝', sort_order: 4 },
     ],
   },
 ];
@@ -267,7 +305,7 @@ const BUSINESSES: BusinessSeed[] = [
       'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800',
       'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800',
     ],
-    videos: [DEMO_CAROUSEL_VIDEOS.storeTour],
+    videos: [SHARMA_KIRANA_VIDEO],
     amenities: ['Free delivery', 'Cash on delivery', 'Same-day delivery'],
     category: 'Grocery',
     address: 'Sector 12, Noida',
@@ -339,7 +377,6 @@ const BUSINESSES: BusinessSeed[] = [
       'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
       'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800',
     ],
-    videos: [DEMO_CAROUSEL_VIDEOS.productPick],
     amenities: ['Doorstep delivery', 'Easy returns', 'Paid delivery'],
     category: 'Fashion',
     address: 'Lajpat Nagar, Delhi',
@@ -392,7 +429,6 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200',
     banner_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800',
     images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800'],
-    videos: [DEMO_CAROUSEL_VIDEOS.dealReel],
     amenities: ['Warranty provided', 'Installation support', 'Cash on delivery'],
     category: 'Electronics',
     address: 'Gurugram',
@@ -435,7 +471,6 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200',
     banner_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800',
     images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800'],
-    videos: [DEMO_CAROUSEL_VIDEOS.bakeryPick],
     amenities: ['Same-day delivery', 'Cash on delivery'],
     category: 'Food',
     address: 'Indirapuram',
@@ -479,7 +514,6 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=200',
     banner_url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800',
     images: ['https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800'],
-    videos: [DEMO_CAROUSEL_VIDEOS.homeTour],
     amenities: ['Wholesaler discount', 'Bulk vending only', 'Paid delivery'],
     category: 'Home',
     address: 'Connaught Place',
@@ -513,7 +547,6 @@ const BUSINESSES: BusinessSeed[] = [
     logo_url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200',
     banner_url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800',
     images: ['https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800'],
-    videos: [DEMO_CAROUSEL_VIDEOS.dealReel],
     amenities: ['Free delivery', 'Cash on delivery'],
     category: 'Health',
     address: 'Sector 62, Noida',
@@ -606,11 +639,17 @@ async function seed(): Promise<void> {
   for (const parent of CATEGORIES) {
     const parentRecord = await prisma.category.upsert({
       where: { slug: parent.slug },
-      update: { name: parent.name, icon: parent.icon, sort_order: parent.sort_order },
+      update: {
+        name: parent.name,
+        icon: parent.icon,
+        emoji: parent.emoji,
+        sort_order: parent.sort_order,
+      },
       create: {
         name: parent.name,
         slug: parent.slug,
         icon: parent.icon,
+        emoji: parent.emoji,
         sort_order: parent.sort_order,
       },
     });
@@ -622,6 +661,7 @@ async function seed(): Promise<void> {
         update: {
           name: child.name,
           icon: child.icon,
+          emoji: child.emoji,
           sort_order: child.sort_order,
           parent_id: parentRecord.id,
         },
@@ -629,6 +669,7 @@ async function seed(): Promise<void> {
           name: child.name,
           slug: child.slug,
           icon: child.icon,
+          emoji: child.emoji,
           sort_order: child.sort_order,
           parent_id: parentRecord.id,
         },

@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID, Length, Matches, MaxLength, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { PartialType } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
@@ -19,6 +29,11 @@ export class CreateCategoryDto {
   icon?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  emoji?: string;
+
+  @IsOptional()
   @IsUUID()
   parent_id?: string;
 
@@ -30,3 +45,10 @@ export class CreateCategoryDto {
 }
 
 export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
+
+export type CategoryIconMode = 'emoji' | 'icons';
+
+export class UpdateCategoryIconModeDto {
+  @IsIn(['emoji', 'icons'])
+  mode: CategoryIconMode;
+}

@@ -2,11 +2,31 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { uniqueSlug } from '../common/utils/slug';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCategoryDto } from './dto/category.dto';
+import { CategoryIconMode, CreateCategoryDto } from './dto/category.dto';
+
+const CATEGORY_ICON_MODE_KEY = 'category_icon_mode';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Public: the admin-controlled icon mode used by all clients. */
+  async getCategoryIconMode(): Promise<{ mode: CategoryIconMode }> {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: CATEGORY_ICON_MODE_KEY },
+    });
+    return { mode: setting?.value === 'icons' ? 'icons' : 'emoji' };
+  }
+
+  /** Admin-only: store the global category icon mode. */
+  async setCategoryIconMode(mode: CategoryIconMode): Promise<{ mode: CategoryIconMode }> {
+    await this.prisma.appSetting.upsert({
+      where: { key: CATEGORY_ICON_MODE_KEY },
+      update: { value: mode },
+      create: { key: CATEGORY_ICON_MODE_KEY, value: mode },
+    });
+    return { mode };
+  }
 
   list() {
     return this.prisma.category.findMany({
@@ -63,6 +83,7 @@ export class CategoriesService {
         name: dto.name.trim(),
         slug,
         icon: dto.icon,
+        emoji: dto.emoji,
         parent_id: dto.parent_id,
         sort_order: dto.sort_order ?? 0,
       },
@@ -85,6 +106,7 @@ export class CategoriesService {
     const data: Prisma.CategoryUpdateInput = {
       ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
       ...(dto.icon !== undefined ? { icon: dto.icon } : {}),
+      ...(dto.emoji !== undefined ? { emoji: dto.emoji } : {}),
       ...(dto.sort_order !== undefined ? { sort_order: dto.sort_order } : {}),
       ...(dto.parent_id !== undefined
         ? { parent: dto.parent_id ? { connect: { id: dto.parent_id } } : { disconnect: true } }

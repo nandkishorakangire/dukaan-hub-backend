@@ -226,6 +226,7 @@ model Category {
   name       String
   slug       String   @unique
   icon       String?
+  emoji      String?
   parent_id  String?  @db.Uuid
   sort_order Int      @default(0)
   created_at DateTime @default(now())
@@ -236,6 +237,16 @@ model Category {
 
   @@index([parent_id])
   @@map("categories")
+}
+
+/** Key/value store for app-wide settings managed by admins. */
+model AppSetting {
+  key        String   @id
+  value      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("app_settings")
 }
 
 model Product {

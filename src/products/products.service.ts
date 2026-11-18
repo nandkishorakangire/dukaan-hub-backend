@@ -16,7 +16,7 @@ import {
 } from './dto/product.dto';
 
 const productInclude = {
-  category: { select: { id: true, name: true, slug: true } },
+  category: { select: { id: true, name: true, slug: true, icon: true, emoji: true } },
 } satisfies Prisma.ProductInclude;
 
 @Injectable()
@@ -99,7 +99,7 @@ export class ProductsService {
   async getById(id: string, user?: AuthenticatedUser) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: { category: { select: { id: true, name: true, slug: true } } },
+      include: { category: { select: { id: true, name: true, slug: true, icon: true, emoji: true } } },
     });
     if (!product) throw new NotFoundException('Product not found');
     if (!product.is_active && !user) throw new NotFoundException('Product not found');

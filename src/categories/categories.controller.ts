@@ -13,7 +13,11 @@ import { Role } from '@prisma/client';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CategoriesService } from './categories.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  UpdateCategoryIconModeDto,
+} from './dto/category.dto';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -32,6 +36,21 @@ export class CategoriesController {
   @ApiOperation({ summary: 'List categories as a nested tree' })
   tree() {
     return this.categories.tree();
+  }
+
+  @Public()
+  @Get('icon-mode')
+  @ApiOperation({ summary: 'Get the admin-configured category icon mode' })
+  iconMode() {
+    return this.categories.getCategoryIconMode();
+  }
+
+  @Patch('icon-mode')
+  @ApiBearerAuth()
+  @Roles(Role.admin)
+  @ApiOperation({ summary: 'Set the category icon mode (admin)' })
+  setIconMode(@Body() dto: UpdateCategoryIconModeDto) {
+    return this.categories.setCategoryIconMode(dto.mode);
   }
 
   @Public()
