@@ -20,6 +20,7 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/monitor-ui/out ./monitor-ui/out
 RUN mkdir -p uploads
 
 EXPOSE 4000

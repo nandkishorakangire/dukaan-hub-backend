@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import {
   APP_FILTER,
@@ -9,6 +9,7 @@ import {
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AdsModule } from './ads/ads.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { RequestStatsMiddleware } from './monitoring/request-stats.middleware';
 import { AddressesModule } from './addresses/addresses.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
@@ -98,4 +99,10 @@ import { UsersModule } from './users/users.module';
     { provide: APP_INTERCEPTOR, useClass: DecimalSerializerInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(RequestStatsMiddleware)
+      .forRoutes('{*path}');
+  }
+}

@@ -4,9 +4,10 @@ NestJS backend for the DukaanHub Expo app. It mirrors the app's Supabase-shaped
 domain (snake_case fields and lowercase enums) so the mobile client can switch
 from mock/Supabase data to this API with minimal mapping.
 
-- **Stack:** NestJS 11, Prisma 6, PostgreSQL, Passport JWT, Socket.IO, Swagger
+- **Stack:** NestJS 11, Next.js 15, Prisma 6, PostgreSQL, Passport JWT, Socket.IO, Swagger
 - **Base URL:** `http://localhost:4000/api/v1`
 - **Swagger UI:** `http://localhost:4000/docs`
+- **Monitoring dashboard:** `http://localhost:4000/monitor`
 
 ## Requirements
 
@@ -27,6 +28,10 @@ npm run start:dev
 ```
 
 `npm install` runs `prisma generate` automatically.
+
+To include the monitoring dashboard, run `npm run build:dashboard` once (or
+`npm run build`, which builds both the API and the dashboard), then start the
+server and open `http://localhost:4000/monitor`.
 
 ### Demo accounts
 
@@ -73,7 +78,9 @@ See [`.env.example`](./.env.example) for every variable.
 | Script | Description |
 | --- | --- |
 | `npm run start:dev` | Watch mode |
-| `npm run build` | Compile to `dist/` |
+| `npm run build` | Compile the API to `dist/` and export the dashboard to `monitor-ui/out/` |
+| `npm run build:api` | Compile only the NestJS API |
+| `npm run build:dashboard` | Export the Next.js dashboard to `monitor-ui/out/` |
 | `npm run lint` | ESLint (TypeScript) |
 | `npm test` | Unit tests (Jest) |
 | `npm run test:e2e` | End-to-end tests (no database required) |
@@ -192,6 +199,41 @@ are accepted. Files are written to `UPLOAD_DIR` and served from `/uploads/...`.
 `GET /health` (under the `/api/v1` prefix) is public and returns
 `status: ok|degraded` plus database state. The process starts even when
 PostgreSQL is unavailable so tooling and health checks still work.
+
+## Monitoring
+
+### Web dashboard
+
+The Next.js monitoring dashboard is served by NestJS at **`/monitor`** (no
+second server or port needed). It auto-refreshes every 5 seconds and shows:
+
+- Server status, database state, process uptime and API version
+- Traffic analytics: total requests, requests in flight, status-code and
+  HTTP-method breakdown, average latency and the latest 20 application calls
+- System failures and degraded-state warnings
+- Resource usage: Node.js heap/RSS/external/array-buffer memory
+- Runtime details: Node version, platform, architecture and PID
+- Raw Prometheus output with a live filter
+
+Build it with `npm run build:dashboard`. If `monitor-ui/out/index.html` is
+missing, the API still starts and logs a hint; the dashboard route simply stays
+unavailable until the build is run. Set `NEXT_PUBLIC_API_BASE_URL` at build time
+if the dashboard is hosted on a different origin than the API.
+
+### Metrics endpoints
+
+All monitoring endpoints are public (no JWT required):
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/v1/monitor/status` | Status, database, uptime, system info and request analytics |
+| `GET /api/v1/monitor/health` | Lightweight health probe (`status`, `database`) |
+| `GET /api/v1/metrics` | Prometheus text-format metrics for Prometheus/Grafana scraping |
+
+Exported metrics include default Node.js process metrics (CPU, memory, event
+loop, GC), `http_requests_total`, `http_request_failures_total` and
+`http_requests_active`. Dashboard polling traffic is excluded from application
+request analytics.
 
 ## Realtime (Socket.IO)
 

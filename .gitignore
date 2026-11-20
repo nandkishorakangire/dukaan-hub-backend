@@ -5,6 +5,11 @@ coverage/
 .env.*.local
 !.env.example
 uploads/
+
+# Next.js dashboard build artifacts (source lives in monitor-ui/)
+monitor-ui/.next/
+monitor-ui/out/
+
 *.tsbuildinfo
 *.log
 npm-debug.log*
