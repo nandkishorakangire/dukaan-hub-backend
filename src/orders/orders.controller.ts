@@ -33,7 +33,7 @@ export class OrdersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List my orders (or a business orders when business_id is supplied)' })
+  @ApiOperation({ summary: 'List my orders (or a marketplace orders when marketplace_id is supplied)' })
   list(@CurrentUser() user: AuthenticatedUser, @Query() query: ListOrdersQueryDto) {
     return this.orders.list(user, query);
   }

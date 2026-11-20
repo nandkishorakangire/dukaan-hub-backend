@@ -11,7 +11,7 @@ import { AdsModule } from './ads/ads.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
-import { BusinessesModule } from './businesses/businesses.module';
+import { MarketplacesModule } from './marketplaces/marketplaces.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ChatModule } from './chat/chat.module';
 import { CouponsModule } from './coupons/coupons.module';
@@ -65,7 +65,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     AddressesModule,
-    BusinessesModule,
+    MarketplacesModule,
     CategoriesModule,
     ProductsModule,
     OrdersModule,

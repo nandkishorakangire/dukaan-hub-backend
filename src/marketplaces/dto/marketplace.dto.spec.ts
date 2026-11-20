@@ -1,18 +1,18 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { BusinessTimingDto, CreateBusinessDto } from './business.dto';
+import { MarketplaceTimingDto, CreateMarketplaceDto } from './marketplace.dto';
 
-function toTiming(value: Record<string, unknown>): BusinessTimingDto {
-  return plainToInstance(BusinessTimingDto, value);
+function toTiming(value: Record<string, unknown>): MarketplaceTimingDto {
+  return plainToInstance(MarketplaceTimingDto, value);
 }
 
-function errorsFor(timing: BusinessTimingDto) {
+function errorsFor(timing: MarketplaceTimingDto) {
   return validate(timing, { whitelist: true }).then((errors) =>
     errors.map((error) => error.property),
   );
 }
 
-describe('BusinessTimingDto', () => {
+describe('MarketplaceTimingDto', () => {
   it('accepts an open day with 24h hours', async () => {
     const timing = toTiming({ day: 'monday', open: '09:30', close: '21:00' });
     await expect(errorsFor(timing)).resolves.toEqual([]);
@@ -41,9 +41,9 @@ describe('BusinessTimingDto', () => {
   });
 });
 
-describe('CreateBusinessDto timings', () => {
+describe('CreateMarketplaceDto timings', () => {
   it('validates nested timings, including a closed day without hours', async () => {
-    const dto = plainToInstance(CreateBusinessDto, {
+    const dto = plainToInstance(CreateMarketplaceDto, {
       name: 'Corner Store',
       timings: [
         { day: 'monday', open: '09:00', close: '18:00' },

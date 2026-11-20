@@ -1,4 +1,4 @@
-/** URL-safe slug used for businesses, pages and categories. */
+/** URL-safe slug used for marketplaces, pages and categories. */
 export function slugify(value: string): string {
   return value
     .normalize('NFKD')

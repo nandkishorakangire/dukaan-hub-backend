@@ -69,7 +69,7 @@ export class ChatService {
     }
 
     const mentions = extractMentions(text);
-    const priority = isPriorityMessage(text, order.business.name);
+    const priority = isPriorityMessage(text, order.marketplace.name);
 
     const message = await this.prisma.chatMessage.create({
       data: {
@@ -89,7 +89,7 @@ export class ChatService {
 
     this.realtime.emitChatMessage(orderId, message);
 
-    const recipientId = sender === ChatSender.buyer ? order.business.owner_id : order.buyer_id;
+    const recipientId = sender === ChatSender.buyer ? order.marketplace.owner_id : order.buyer_id;
     this.realtime.emitNotification(recipientId, {
       type: 'chat:message',
       order_id: orderId,
@@ -120,7 +120,7 @@ export class ChatService {
 
   private partyOf(order: OrderWithRelations, user: AuthenticatedUser): ChatSender | null {
     if (order.buyer_id === user.id) return ChatSender.buyer;
-    if (isAdmin(user) || order.business.owner_id === user.id) return ChatSender.seller;
+    if (isAdmin(user) || order.marketplace.owner_id === user.id) return ChatSender.seller;
     return null;
   }
 }

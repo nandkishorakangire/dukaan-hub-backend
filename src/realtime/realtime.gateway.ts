@@ -20,6 +20,7 @@ type SocketData = {
 };
 
 @WebSocketGateway({
+  path: '/api/v1/socket.io',
   cors: { origin: true, credentials: true },
   transports: ['websocket', 'polling'],
 })
@@ -65,22 +66,22 @@ export class RealtimeGateway
     this.logger.debug(`Socket disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('business:join')
-  async joinBusiness(
+  @SubscribeMessage('marketplace:join')
+  async joinMarketplace(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { business_id?: string },
+    @MessageBody() body: { marketplace_id?: string },
   ) {
-    if (!body?.business_id) return { ok: false, error: 'business_id is required' };
-    await client.join(`business:${body.business_id}`);
+    if (!body?.marketplace_id) return { ok: false, error: 'marketplace_id is required' };
+    await client.join(`marketplace:${body.marketplace_id}`);
     return { ok: true };
   }
 
-  @SubscribeMessage('business:leave')
-  async leaveBusiness(
+  @SubscribeMessage('marketplace:leave')
+  async leaveMarketplace(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { business_id?: string },
+    @MessageBody() body: { marketplace_id?: string },
   ) {
-    if (body?.business_id) await client.leave(`business:${body.business_id}`);
+    if (body?.marketplace_id) await client.leave(`marketplace:${body.marketplace_id}`);
     return { ok: true };
   }
 
@@ -124,13 +125,13 @@ export class RealtimeGateway
   private async canAccessOrder(orderId: string, user: AuthenticatedUser): Promise<boolean> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { buyer_id: true, business: { select: { owner_id: true } } },
+      select: { buyer_id: true, marketplace: { select: { owner_id: true } } },
     });
     if (!order) return false;
     return (
       isAdmin(user) ||
       order.buyer_id === user.id ||
-      order.business.owner_id === user.id
+      order.marketplace.owner_id === user.id
     );
   }
 }

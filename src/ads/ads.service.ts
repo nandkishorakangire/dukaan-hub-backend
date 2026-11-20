@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AdMediaType, Prisma } from '@prisma/client';
-import { BusinessesService } from '../businesses/businesses.service';
+import { MarketplacesService } from '../marketplaces/marketplaces.service';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { probeVideoOrientation } from '../common/utils/video-orientation';
@@ -13,44 +13,34 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdDto, ListAdsQueryDto, UpdateAdDto } from './dto/ad.dto';
 
 const adInclude = {
-  business: { select: { id: true, name: true, slug: true, logo_url: true } },
+  marketplace: { select: { id: true, name: true, slug: true, logo_url: true } },
 } satisfies Prisma.AdInclude;
 
-export type AdWithBusiness = Prisma.AdGetPayload<{ include: typeof adInclude }>;
+export type AdWithMarketplace = Prisma.AdGetPayload<{ include: typeof adInclude }>;
 
 const isVideoMedia = (type: AdMediaType) => type === 'video' || type === 'status_video';
 const isStatusMedia = (type: AdMediaType) =>
   type === 'status_image' || type === 'status_video';
 
-/** Keep media_url/posters aligned with the first item of the ordered lists. */
-function resolveMediaLists(
-  mediaUrl: string,
-  mediaUrls: string[] | undefined,
-  posterUrl: string | null | undefined,
-  posterUrls: string[] | undefined,
-) {
+/** Keep media_url aligned with the first item of the ordered list. */
+function resolveMediaList(mediaUrl: string, mediaUrls: string[] | undefined) {
   const urls = mediaUrls?.length ? mediaUrls : [mediaUrl];
-  const posters = posterUrls?.length
-    ? posterUrls
-    : posterUrl
-      ? [posterUrl]
-      : [];
-  return { urls, posters, primary: urls[0] ?? mediaUrl };
+  return { urls, primary: urls[0] ?? mediaUrl };
 }
 
 @Injectable()
 export class AdsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly businesses: BusinessesService,
+    private readonly marketplaces: MarketplacesService,
   ) {}
 
   /** Ads that are currently live. */
-  async listPublic(query: ListAdsQueryDto): Promise<PaginatedResult<AdWithBusiness>> {
+  async listPublic(query: ListAdsQueryDto): Promise<PaginatedResult<AdWithMarketplace>> {
     const now = new Date();
     const where: Prisma.AdWhereInput = {
       is_active: true,
-      ...(query.business_id ? { business_id: query.business_id } : {}),
+      ...(query.marketplace_id ? { marketplace_id: query.marketplace_id } : {}),
       AND: [
         { OR: [{ starts_at: null }, { starts_at: { lte: now } }] },
         { OR: [{ ends_at: null }, { ends_at: { gte: now } }] },
@@ -64,51 +54,46 @@ export class AdsService {
   async mine(
     user: AuthenticatedUser,
     query: ListAdsQueryDto,
-  ): Promise<PaginatedResult<AdWithBusiness>> {
+  ): Promise<PaginatedResult<AdWithMarketplace>> {
     const where: Prisma.AdWhereInput = {
-      ...(isAdmin(user) ? {} : { business: { owner_id: user.id } }),
-      ...(query.business_id ? { business_id: query.business_id } : {}),
+      ...(isAdmin(user) ? {} : { marketplace: { owner_id: user.id } }),
+      ...(query.marketplace_id ? { marketplace_id: query.marketplace_id } : {}),
       ...(query.active !== undefined ? { is_active: query.active } : {}),
     };
 
     return this.paginateAds(where, query);
   }
 
-  async getById(id: string): Promise<AdWithBusiness> {
+  async getById(id: string): Promise<AdWithMarketplace> {
     const ad = await this.prisma.ad.findUnique({ where: { id }, include: adInclude });
     if (!ad) throw new NotFoundException('Ad not found');
     return ad;
   }
 
-  async create(user: AuthenticatedUser, dto: CreateAdDto): Promise<AdWithBusiness> {
-    if (dto.business_id) {
-      await this.businesses.assertOwned(dto.business_id, user);
+  async create(user: AuthenticatedUser, dto: CreateAdDto): Promise<AdWithMarketplace> {
+    if (dto.marketplace_id) {
+      await this.marketplaces.assertOwned(dto.marketplace_id, user);
     } else if (!isAdmin(user)) {
-      throw new BadRequestException('business_id is required for storefront ads');
+      throw new BadRequestException('marketplace_id is required for storefront ads');
     }
 
     this.assertDateRange(dto.starts_at, dto.ends_at);
 
     const mediaType = dto.media_type ?? 'image';
     const video = isVideoMedia(mediaType);
-    const { urls, posters, primary } = resolveMediaLists(
-      dto.media_url,
-      dto.media_urls,
-      dto.poster_url,
-      dto.poster_urls,
-    );
+    const { urls, primary } = resolveMediaList(dto.media_url, dto.media_urls);
     // Both status types wait for one play click, then run their list in order.
     const autoPlay = isStatusMedia(mediaType) ? false : (dto.auto_play ?? true);
 
     return this.prisma.ad.create({
       data: {
-        business_id: dto.business_id ?? null,
+        marketplace_id: dto.marketplace_id ?? null,
         title: dto.title.trim(),
         media_url: primary,
         media_urls: urls,
         media_type: mediaType,
-        poster_url: posters[0] ?? null,
-        poster_urls: posters,
+        poster_url: dto.poster_url ?? null,
+        thumbnail_urls: dto.thumbnail_urls ?? [],
         video_orientation: video
           ? dto.video_orientation ?? (await probeVideoOrientation(primary))
           : null,
@@ -131,7 +116,7 @@ export class AdsService {
     id: string,
     user: AuthenticatedUser,
     dto: UpdateAdDto,
-  ): Promise<AdWithBusiness> {
+  ): Promise<AdWithMarketplace> {
     const ad = await this.getById(id);
     await this.assertCanManage(ad, user);
     this.assertDateRange(
@@ -142,16 +127,9 @@ export class AdsService {
     const mediaType = dto.media_type ?? ad.media_type;
     const video = isVideoMedia(mediaType);
     const currentUrls = ad.media_urls?.length ? ad.media_urls : [ad.media_url];
-    const currentPosters = ad.poster_urls?.length
-      ? ad.poster_urls
-      : ad.poster_url
-        ? [ad.poster_url]
-        : [];
-    const { urls, posters, primary } = resolveMediaLists(
+    const { urls, primary } = resolveMediaList(
       dto.media_url ?? ad.media_url,
       dto.media_urls ?? (dto.media_url === undefined ? currentUrls : undefined),
-      dto.poster_url !== undefined ? dto.poster_url : (currentPosters[0] ?? null),
-      dto.poster_urls ?? (dto.poster_url === undefined ? currentPosters : undefined),
     );
     const mediaChanged =
       primary !== ad.media_url ||
@@ -183,8 +161,10 @@ export class AdsService {
         media_url: primary,
         media_urls: urls,
         ...(dto.media_type !== undefined ? { media_type: dto.media_type } : {}),
-        poster_url: posters[0] ?? null,
-        poster_urls: posters,
+        ...(dto.poster_url !== undefined ? { poster_url: dto.poster_url } : {}),
+        ...(dto.thumbnail_urls !== undefined
+          ? { thumbnail_urls: dto.thumbnail_urls }
+          : {}),
         ...(nextOrientation !== undefined ? { video_orientation: nextOrientation } : {}),
         ...(dto.link_url !== undefined ? { link_url: dto.link_url } : {}),
         ...(dto.sort_order !== undefined ? { sort_order: dto.sort_order } : {}),
@@ -217,7 +197,7 @@ export class AdsService {
   private async paginateAds(
     where: Prisma.AdWhereInput,
     query: ListAdsQueryDto,
-  ): Promise<PaginatedResult<AdWithBusiness>> {
+  ): Promise<PaginatedResult<AdWithMarketplace>> {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.ad.findMany({
         where,
@@ -232,12 +212,12 @@ export class AdsService {
     return paginate(data, total, query.page, query.limit);
   }
 
-  private async assertCanManage(ad: AdWithBusiness, user: AuthenticatedUser): Promise<void> {
+  private async assertCanManage(ad: AdWithMarketplace, user: AuthenticatedUser): Promise<void> {
     if (isAdmin(user)) return;
-    if (!ad.business_id) {
+    if (!ad.marketplace_id) {
       throw new ForbiddenException('You do not have access to this ad');
     }
-    await this.businesses.assertOwned(ad.business_id, user);
+    await this.marketplaces.assertOwned(ad.marketplace_id, user);
   }
 
   private assertDateRange(startsAt?: string | null, endsAt?: string | null): void {

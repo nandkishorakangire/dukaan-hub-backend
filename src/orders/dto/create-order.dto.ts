@@ -84,7 +84,7 @@ export class DeliveryAddressDto {
 
 export class CreateOrderDto {
   @IsUUID()
-  business_id: string;
+  marketplace_id: string;
 
   @IsArray()
   @ArrayMinSize(1)

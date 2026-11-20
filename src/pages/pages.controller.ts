@@ -22,45 +22,45 @@ export class PagesController {
   constructor(private readonly pages: PagesService) {}
 
   @Public()
-  @Get('businesses/:business_id/pages')
+  @Get('marketplaces/:marketplace_id/pages')
   @ApiOperation({ summary: 'List published pages for a storefront' })
   list(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @Query() query: ListPagesQueryDto,
   ) {
-    return this.pages.listForBusiness(businessId, query);
+    return this.pages.listForMarketplace(marketplaceId, query);
   }
 
-  @Get('businesses/:business_id/pages/manage')
+  @Get('marketplaces/:marketplace_id/pages/manage')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all pages, including drafts (owner/admin)' })
   manage(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: ListPagesQueryDto,
   ) {
-    return this.pages.listForOwner(businessId, user, query);
+    return this.pages.listForOwner(marketplaceId, user, query);
   }
 
   @Public()
-  @Get('businesses/:business_id/pages/:slug')
+  @Get('marketplaces/:marketplace_id/pages/:slug')
   @ApiOperation({ summary: 'Get a published storefront page by slug' })
   bySlug(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @Param('slug') slug: string,
   ) {
-    return this.pages.getPublishedBySlug(businessId, slug);
+    return this.pages.getPublishedBySlug(marketplaceId, slug);
   }
 
-  @Post('businesses/:business_id/pages')
+  @Post('marketplaces/:marketplace_id/pages')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a storefront page (owner/admin)' })
   create(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreatePageDto,
   ) {
-    return this.pages.create(businessId, user, dto);
+    return this.pages.create(marketplaceId, user, dto);
   }
 
   @Get('pages/:id')

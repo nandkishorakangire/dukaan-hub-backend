@@ -7,7 +7,7 @@ import { Server } from 'socket.io';
  *
  * Rooms:
  *  - `user:<id>`      private, joined after a valid handshake token
- *  - `business:<id>`  public updates for a storefront
+ *  - `marketplace:<id>`  public updates for a storefront
  *  - `order:<id>`     private, joined only by the buyer, owner or admin
  */
 @Injectable()
@@ -26,13 +26,13 @@ export class RealtimeService {
     }
   }
 
-  emitBusinessUpdate(businessId: string, payload: unknown): void {
-    this.emitToRoom(`business:${businessId}`, 'business:update', payload);
-    this.emitToRoom('public', 'business:update', payload);
+  emitMarketplaceUpdate(marketplaceId: string, payload: unknown): void {
+    this.emitToRoom(`marketplace:${marketplaceId}`, 'marketplace:update', payload);
+    this.emitToRoom('public', 'marketplace:update', payload);
   }
 
-  emitProductStock(businessId: string, payload: unknown): void {
-    this.emitToRoom(`business:${businessId}`, 'product:stock', payload);
+  emitProductStock(marketplaceId: string, payload: unknown): void {
+    this.emitToRoom(`marketplace:${marketplaceId}`, 'product:stock', payload);
   }
 
   emitNotification(userId: string, payload: unknown): void {

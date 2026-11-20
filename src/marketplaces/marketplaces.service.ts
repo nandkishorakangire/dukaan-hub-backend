@@ -10,19 +10,19 @@ import { resolveVideoOrientations } from '../common/utils/video-orientation';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  CreateBusinessDto,
-  ListBusinessesQueryDto,
-  UpdateBusinessDto,
-} from './dto/business.dto';
+  CreateMarketplaceDto,
+  ListMarketplacesQueryDto,
+  UpdateMarketplaceDto,
+} from './dto/marketplace.dto';
 
 @Injectable()
-export class BusinessesService {
+export class MarketplacesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(
-    query: ListBusinessesQueryDto,
-  ): Promise<PaginatedResult<Prisma.BusinessGetPayload<object>>> {
-    const where: Prisma.BusinessWhereInput = {
+    query: ListMarketplacesQueryDto,
+  ): Promise<PaginatedResult<Prisma.MarketplaceGetPayload<object>>> {
+    const where: Prisma.MarketplaceWhereInput = {
       is_published: true,
       ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),
       ...(query.featured !== undefined ? { is_featured: query.featured } : {}),
@@ -38,7 +38,7 @@ export class BusinessesService {
         : {}),
     };
 
-    const orderBy: Prisma.BusinessOrderByWithRelationInput =
+    const orderBy: Prisma.MarketplaceOrderByWithRelationInput =
       query.sort === 'rating'
         ? { rating: 'desc' }
         : query.sort === 'newest'
@@ -48,20 +48,20 @@ export class BusinessesService {
             : { trend_score: 'desc' };
 
     const [data, total] = await this.prisma.$transaction([
-      this.prisma.business.findMany({
+      this.prisma.marketplace.findMany({
         where,
         orderBy: [orderBy, { created_at: 'desc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
-      this.prisma.business.count({ where }),
+      this.prisma.marketplace.count({ where }),
     ]);
 
     return paginate(data, total, query.page, query.limit);
   }
 
   async trending(limit = 10) {
-    return this.prisma.business.findMany({
+    return this.prisma.marketplace.findMany({
       where: { is_published: true },
       orderBy: [{ trend_score: 'desc' }, { rating: 'desc' }],
       take: Math.min(Math.max(limit, 1), 50),
@@ -69,30 +69,30 @@ export class BusinessesService {
   }
 
   async getById(id: string) {
-    const business = await this.prisma.business.findUnique({
+    const marketplace = await this.prisma.marketplace.findUnique({
       where: { id },
       include: { owner: { select: { id: true, name: true, avatar_url: true } } },
     });
-    if (!business) throw new NotFoundException('Business not found');
-    return business;
+    if (!marketplace) throw new NotFoundException('Marketplace not found');
+    return marketplace;
   }
 
   async getBySlug(slug: string) {
-    const business = await this.prisma.business.findUnique({ where: { slug } });
-    if (!business) throw new NotFoundException('Business not found');
-    return business;
+    const marketplace = await this.prisma.marketplace.findUnique({ where: { slug } });
+    if (!marketplace) throw new NotFoundException('Marketplace not found');
+    return marketplace;
   }
 
   async mine(ownerId: string) {
-    return this.prisma.business.findMany({
+    return this.prisma.marketplace.findMany({
       where: { owner_id: ownerId },
       orderBy: { created_at: 'desc' },
     });
   }
 
-  async create(ownerId: string, dto: CreateBusinessDto) {
+  async create(ownerId: string, dto: CreateMarketplaceDto) {
     const slug = await uniqueSlug(dto.slug ?? dto.name, async (candidate) => {
-      const existing = await this.prisma.business.findUnique({
+      const existing = await this.prisma.marketplace.findUnique({
         where: { slug: candidate },
         select: { id: true },
       });
@@ -102,7 +102,7 @@ export class BusinessesService {
     const videos = dto.videos ?? [];
     const orientations = await resolveVideoOrientations(videos, dto.video_orientations);
 
-    const business = await this.prisma.business.create({
+    const marketplace = await this.prisma.marketplace.create({
       data: {
         owner_id: ownerId,
         name: dto.name.trim(),
@@ -142,16 +142,16 @@ export class BusinessesService {
       });
     }
 
-    return business;
+    return marketplace;
   }
 
-  async update(id: string, user: AuthenticatedUser, dto: UpdateBusinessDto) {
-    const business = await this.assertOwned(id, user);
+  async update(id: string, user: AuthenticatedUser, dto: UpdateMarketplaceDto) {
+    const marketplace = await this.assertOwned(id, user);
 
-    let slug = business.slug;
-    if (dto.slug && dto.slug !== business.slug) {
+    let slug = marketplace.slug;
+    if (dto.slug && dto.slug !== marketplace.slug) {
       slug = await uniqueSlug(dto.slug, async (candidate) => {
-        const existing = await this.prisma.business.findUnique({
+        const existing = await this.prisma.marketplace.findUnique({
           where: { slug: candidate },
           select: { id: true },
         });
@@ -161,12 +161,12 @@ export class BusinessesService {
 
     let videoOrientations: string[] | undefined;
     if (dto.videos !== undefined || dto.video_orientations !== undefined) {
-      const urls = dto.videos ?? business.videos;
+      const urls = dto.videos ?? marketplace.videos;
       const resolved = await resolveVideoOrientations(urls, dto.video_orientations);
       videoOrientations = resolved.map((orientation) => orientation ?? '');
     }
 
-    return this.prisma.business.update({
+    return this.prisma.marketplace.update({
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -198,17 +198,17 @@ export class BusinessesService {
 
   async remove(id: string, user: AuthenticatedUser) {
     await this.assertOwned(id, user);
-    await this.prisma.business.delete({ where: { id } });
+    await this.prisma.marketplace.delete({ where: { id } });
     return { success: true };
   }
 
-  /** Loads a business and verifies that the caller owns it (admins bypass). */
+  /** Loads a marketplace and verifies that the caller owns it (admins bypass). */
   async assertOwned(id: string, user: AuthenticatedUser) {
-    const business = await this.prisma.business.findUnique({ where: { id } });
-    if (!business) throw new NotFoundException('Business not found');
-    if (business.owner_id !== user.id && !isAdmin(user)) {
-      throw new ForbiddenException('You do not have access to this business');
+    const marketplace = await this.prisma.marketplace.findUnique({ where: { id } });
+    if (!marketplace) throw new NotFoundException('Marketplace not found');
+    if (marketplace.owner_id !== user.id && !isAdmin(user)) {
+      throw new ForbiddenException('You do not have access to this marketplace');
     }
-    return business;
+    return marketplace;
   }
 }

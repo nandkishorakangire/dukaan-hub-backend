@@ -6,7 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { paginate } from '../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
-import { BusinessesService } from '../businesses/businesses.service';
+import { MarketplacesService } from '../marketplaces/marketplaces.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import {
@@ -23,16 +23,16 @@ const productInclude = {
 export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly businesses: BusinessesService,
+    private readonly marketplaces: MarketplacesService,
     private readonly realtime: RealtimeService,
   ) {}
 
-  async listForBusiness(businessId: string, query: ListProductsQueryDto) {
-    await this.ensureBusinessExists(businessId);
+  async listForMarketplace(marketplaceId: string, query: ListProductsQueryDto) {
+    await this.ensureMarketplaceExists(marketplaceId);
 
     return this.list(
       {
-        business_id: businessId,
+        marketplace_id: marketplaceId,
         is_active: query.include_inactive ? undefined : true,
       },
       query,
@@ -44,16 +44,16 @@ export class ProductsService {
    * on the buyer app, which used to rely on bundled mock data.
    */
   async listGlobal(query: ListProductsQueryDto) {
-    return this.list({ is_active: true, business: { is_published: true } }, query);
+    return this.list({ is_active: true, marketplace: { is_published: true } }, query);
   }
 
   async listAllForOwner(
-    businessId: string,
+    marketplaceId: string,
     user: AuthenticatedUser,
     query: ListProductsQueryDto,
   ) {
-    await this.businesses.assertOwned(businessId, user);
-    return this.listForBusiness(businessId, { ...query, include_inactive: true });
+    await this.marketplaces.assertOwned(marketplaceId, user);
+    return this.listForMarketplace(marketplaceId, { ...query, include_inactive: true });
   }
 
   private async list(
@@ -106,13 +106,13 @@ export class ProductsService {
     return product;
   }
 
-  async create(businessId: string, user: AuthenticatedUser, dto: CreateProductDto) {
-    await this.businesses.assertOwned(businessId, user);
+  async create(marketplaceId: string, user: AuthenticatedUser, dto: CreateProductDto) {
+    await this.marketplaces.assertOwned(marketplaceId, user);
     if (dto.category_id) await this.ensureCategoryExists(dto.category_id);
 
     const product = await this.prisma.product.create({
       data: {
-        business_id: businessId,
+        marketplace_id: marketplaceId,
         name: dto.name.trim(),
         description: dto.description,
         price: dto.price,
@@ -131,7 +131,7 @@ export class ProductsService {
       include: productInclude,
     });
 
-    this.realtime.emitProductStock(product.business_id, {
+    this.realtime.emitProductStock(product.marketplace_id, {
       product_id: product.id,
       stock_quantity: product.stock_quantity,
     });
@@ -141,7 +141,7 @@ export class ProductsService {
 
   async update(id: string, user: AuthenticatedUser, dto: UpdateProductDto) {
     const product = await this.findProduct(id);
-    await this.businesses.assertOwned(product.business_id, user);
+    await this.marketplaces.assertOwned(product.marketplace_id, user);
     if (dto.category_id) await this.ensureCategoryExists(dto.category_id);
 
     const price = dto.price ?? Number(product.price);
@@ -177,7 +177,7 @@ export class ProductsService {
     });
 
     if (dto.stock_quantity !== undefined) {
-      this.realtime.emitProductStock(updated.business_id, {
+      this.realtime.emitProductStock(updated.marketplace_id, {
         product_id: updated.id,
         stock_quantity: updated.stock_quantity,
       });
@@ -188,14 +188,14 @@ export class ProductsService {
 
   async updateStock(id: string, user: AuthenticatedUser, stockQuantity: number) {
     const product = await this.findProduct(id);
-    await this.businesses.assertOwned(product.business_id, user);
+    await this.marketplaces.assertOwned(product.marketplace_id, user);
 
     const updated = await this.prisma.product.update({
       where: { id },
       data: { stock_quantity: stockQuantity },
     });
 
-    this.realtime.emitProductStock(updated.business_id, {
+    this.realtime.emitProductStock(updated.marketplace_id, {
       product_id: updated.id,
       stock_quantity: updated.stock_quantity,
     });
@@ -205,7 +205,7 @@ export class ProductsService {
 
   async remove(id: string, user: AuthenticatedUser) {
     const product = await this.findProduct(id);
-    await this.businesses.assertOwned(product.business_id, user);
+    await this.marketplaces.assertOwned(product.marketplace_id, user);
     await this.prisma.product.delete({ where: { id } });
     return { success: true };
   }
@@ -216,12 +216,12 @@ export class ProductsService {
     return product;
   }
 
-  private async ensureBusinessExists(id: string) {
-    const business = await this.prisma.business.findUnique({
+  private async ensureMarketplaceExists(id: string) {
+    const marketplace = await this.prisma.marketplace.findUnique({
       where: { id },
       select: { id: true },
     });
-    if (!business) throw new NotFoundException('Business not found');
+    if (!marketplace) throw new NotFoundException('Marketplace not found');
   }
 
   private async ensureCategoryExists(id: string) {

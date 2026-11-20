@@ -1,7 +1,7 @@
 {
   "name": "dukaanhub-backend",
   "version": "1.0.0",
-  "description": "NestJS API for DukaanHub - multi-vendor commerce for Indian businesses",
+  "description": "NestJS API for DukaanHub - multi-vendor commerce for Indian marketplaces",
   "author": "DukaanHub",
   "private": true,
   "license": "MIT",

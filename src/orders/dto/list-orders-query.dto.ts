@@ -10,5 +10,5 @@ export class ListOrdersQueryDto extends PaginationQueryDto {
   /** When present, returns orders for that storefront (owner/admin only). */
   @IsOptional()
   @IsUUID()
-  business_id?: string;
+  marketplace_id?: string;
 }

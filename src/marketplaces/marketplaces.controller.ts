@@ -13,58 +13,58 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
-import { BusinessesService } from './businesses.service';
+import { MarketplacesService } from './marketplaces.service';
 import {
-  CreateBusinessDto,
-  ListBusinessesQueryDto,
-  UpdateBusinessDto,
-} from './dto/business.dto';
+  CreateMarketplaceDto,
+  ListMarketplacesQueryDto,
+  UpdateMarketplaceDto,
+} from './dto/marketplace.dto';
 
-@ApiTags('businesses')
-@Controller('businesses')
-export class BusinessesController {
-  constructor(private readonly businesses: BusinessesService) {}
+@ApiTags('marketplaces')
+@Controller('marketplaces')
+export class MarketplacesController {
+  constructor(private readonly marketplaces: MarketplacesService) {}
 
   @Public()
   @Get()
   @ApiOperation({ summary: 'List storefronts (search, category, featured, sort)' })
-  list(@Query() query: ListBusinessesQueryDto) {
-    return this.businesses.list(query);
+  list(@Query() query: ListMarketplacesQueryDto) {
+    return this.marketplaces.list(query);
   }
 
   @Public()
   @Get('trending')
   @ApiOperation({ summary: 'Trending storefronts' })
   trending(@Query('limit') limit?: string) {
-    return this.businesses.trending(limit ? Number(limit) : 10);
+    return this.marketplaces.trending(limit ? Number(limit) : 10);
   }
 
   @Get('mine')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Storefronts owned by the signed-in user' })
   mine(@CurrentUser('id') userId: string) {
-    return this.businesses.mine(userId);
+    return this.marketplaces.mine(userId);
   }
 
   @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get a storefront by slug' })
   bySlug(@Param('slug') slug: string) {
-    return this.businesses.getBySlug(slug);
+    return this.marketplaces.getBySlug(slug);
   }
 
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a storefront by id' })
   byId(@Param('id', ParseUUIDPipe) id: string) {
-    return this.businesses.getById(id);
+    return this.marketplaces.getById(id);
   }
 
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a storefront (the account becomes a seller)' })
-  create(@CurrentUser('id') userId: string, @Body() dto: CreateBusinessDto) {
-    return this.businesses.create(userId, dto);
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateMarketplaceDto) {
+    return this.marketplaces.create(userId, dto);
   }
 
   @Patch(':id')
@@ -73,15 +73,15 @@ export class BusinessesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpdateBusinessDto,
+    @Body() dto: UpdateMarketplaceDto,
   ) {
-    return this.businesses.update(id, user, dto);
+    return this.marketplaces.update(id, user, dto);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a storefront (owner or admin)' })
   remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.businesses.remove(id, user);
+    return this.marketplaces.remove(id, user);
   }
 }

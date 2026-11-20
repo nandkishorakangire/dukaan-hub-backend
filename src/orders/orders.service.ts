@@ -10,7 +10,7 @@ import { DeliverySpeed, OrderStatus, PaymentMode, Prisma } from '@prisma/client'
 import { randomBytes } from 'node:crypto';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
-import { BusinessesService } from '../businesses/businesses.service';
+import { MarketplacesService } from '../marketplaces/marketplaces.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -36,14 +36,14 @@ type OrderLine = {
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly businesses: BusinessesService,
+    private readonly marketplaces: MarketplacesService,
     private readonly realtime: RealtimeService,
     private readonly config: ConfigService,
   ) {}
 
   async create(buyer: AuthenticatedUser, dto: CreateOrderDto): Promise<OrderWithRelations> {
-    const business = await this.prisma.business.findUnique({
-      where: { id: dto.business_id },
+    const marketplace = await this.prisma.marketplace.findUnique({
+      where: { id: dto.marketplace_id },
       select: {
         id: true,
         name: true,
@@ -51,10 +51,10 @@ export class OrdersService {
         accepts_internal_payments: true,
       },
     });
-    if (!business) throw new NotFoundException('Business not found');
+    if (!marketplace) throw new NotFoundException('Marketplace not found');
 
-    if (dto.payment_mode === PaymentMode.internal && !business.accepts_internal_payments) {
-      throw new BadRequestException('This business does not accept in-app payments');
+    if (dto.payment_mode === PaymentMode.internal && !marketplace.accepts_internal_payments) {
+      throw new BadRequestException('This marketplace does not accept in-app payments');
     }
 
     // Merge duplicate lines so a client cannot bypass the per-line quantity cap.
@@ -67,7 +67,7 @@ export class OrdersService {
     const productIds = [...quantities.keys()];
 
     const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds }, business_id: business.id, is_active: true },
+      where: { id: { in: productIds }, marketplace_id: marketplace.id, is_active: true },
     });
     const byId = new Map(products.map((product) => [product.id, product]));
     if (products.length !== productIds.length) {
@@ -148,7 +148,7 @@ export class OrdersService {
         data: {
           order_number: this.generateOrderNumber(),
           buyer_id: buyer.id,
-          business_id: business.id,
+          marketplace_id: marketplace.id,
           subtotal: totals.subtotal,
           discount: totals.discount,
           delivery_fee: totals.delivery_fee,
@@ -182,8 +182,8 @@ export class OrdersService {
       });
     });
 
-    this.realtime.emitOrderUpdate(order.id, order, [order.buyer_id, business.owner_id]);
-    this.realtime.emitNotification(business.owner_id, {
+    this.realtime.emitOrderUpdate(order.id, order, [order.buyer_id, marketplace.owner_id]);
+    this.realtime.emitNotification(marketplace.owner_id, {
       type: 'order:new',
       order_id: order.id,
       title: 'New order received',
@@ -200,9 +200,9 @@ export class OrdersService {
   ): Promise<PaginatedResult<OrderWithRelations>> {
     const where: Prisma.OrderWhereInput = {};
 
-    if (query.business_id) {
-      await this.businesses.assertOwned(query.business_id, user);
-      where.business_id = query.business_id;
+    if (query.marketplace_id) {
+      await this.marketplaces.assertOwned(query.marketplace_id, user);
+      where.marketplace_id = query.marketplace_id;
     } else if (!isAdmin(user)) {
       where.buyer_id = user.id;
     }
@@ -215,12 +215,12 @@ export class OrdersService {
     user: AuthenticatedUser,
     query: ListOrdersQueryDto,
   ): Promise<PaginatedResult<OrderWithRelations>> {
-    const businesses = await this.prisma.business.findMany({
+    const marketplaces = await this.prisma.marketplace.findMany({
       where: isAdmin(user) ? {} : { owner_id: user.id },
       select: { id: true },
     });
     const where: Prisma.OrderWhereInput = {
-      business_id: { in: businesses.map((business) => business.id) },
+      marketplace_id: { in: marketplaces.map((marketplace) => marketplace.id) },
       ...(query.status ? { status: query.status } : {}),
     };
     return this.paginateOrders(where, query);
@@ -266,11 +266,11 @@ export class OrdersService {
 
     const orders = await this.prisma.order.findMany({
       where: { id: { in: orderIds } },
-      include: { business: { select: { owner_id: true } } },
+      include: { marketplace: { select: { owner_id: true } } },
     });
 
     const ownedOrderIds = orders
-      .filter((o) => isAdmin(user) || o.business.owner_id === user.id)
+      .filter((o) => isAdmin(user) || o.marketplace.owner_id === user.id)
       .map((o) => o.id);
 
     if (!ownedOrderIds.length) return;
@@ -318,7 +318,7 @@ export class OrdersService {
     if (
       !isAdmin(user) &&
       order.buyer_id !== user.id &&
-      order.business.owner_id !== user.id
+      order.marketplace.owner_id !== user.id
     ) {
       throw new ForbiddenException('You do not have access to this order');
     }
@@ -387,7 +387,7 @@ export class OrdersService {
 
     this.emitOrderChanged(updated, `Order ${updated.order_number} was cancelled`);
     if (actor.id === updated.buyer_id) {
-      this.realtime.emitNotification(updated.business.owner_id, {
+      this.realtime.emitNotification(updated.marketplace.owner_id, {
         type: 'order:cancelled',
         order_id: updated.id,
         title: 'Buyer cancelled an order',
@@ -399,7 +399,7 @@ export class OrdersService {
   }
 
   private emitOrderChanged(order: OrderWithRelations, message: string): void {
-    this.realtime.emitOrderUpdate(order.id, order, [order.buyer_id, order.business.owner_id]);
+    this.realtime.emitOrderUpdate(order.id, order, [order.buyer_id, order.marketplace.owner_id]);
     this.realtime.emitNotification(order.buyer_id, {
       type: 'order:update',
       order_id: order.id,
@@ -413,10 +413,10 @@ export class OrdersService {
     if (productIds.length === 0) return;
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, business_id: true, stock_quantity: true },
+      select: { id: true, marketplace_id: true, stock_quantity: true },
     });
     for (const product of products) {
-      this.realtime.emitProductStock(product.business_id, {
+      this.realtime.emitProductStock(product.marketplace_id, {
         product_id: product.id,
         stock_quantity: product.stock_quantity,
       });
@@ -427,14 +427,14 @@ export class OrdersService {
     if (
       !isAdmin(user) &&
       order.buyer_id !== user.id &&
-      order.business.owner_id !== user.id
+      order.marketplace.owner_id !== user.id
     ) {
       throw new ForbiddenException('You do not have access to this order');
     }
   }
 
   private assertCanSell(order: OrderWithRelations, user: AuthenticatedUser): void {
-    if (!isAdmin(user) && order.business.owner_id !== user.id) {
+    if (!isAdmin(user) && order.marketplace.owner_id !== user.id) {
       throw new ForbiddenException('Only the seller can change this order');
     }
   }

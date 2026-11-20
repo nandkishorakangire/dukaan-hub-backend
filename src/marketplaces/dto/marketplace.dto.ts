@@ -16,17 +16,17 @@ import {
 import { PartialType } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 
-export class BusinessTimingDto {
+export class MarketplaceTimingDto {
   @IsString()
   @MaxLength(40)
   day: string;
 
-  @ValidateIf((timing: BusinessTimingDto) => !timing.closed)
+  @ValidateIf((timing: MarketplaceTimingDto) => !timing.closed)
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'open must be HH:MM (24h)' })
   open: string;
 
-  @ValidateIf((timing: BusinessTimingDto) => !timing.closed)
+  @ValidateIf((timing: MarketplaceTimingDto) => !timing.closed)
   @IsString()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'close must be HH:MM (24h)' })
   close: string;
@@ -36,7 +36,7 @@ export class BusinessTimingDto {
   closed?: boolean;
 }
 
-export class CreateBusinessDto {
+export class CreateMarketplaceDto {
   @IsString()
   @Length(2, 120)
   name: string;
@@ -107,8 +107,8 @@ export class CreateBusinessDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BusinessTimingDto)
-  timings?: BusinessTimingDto[];
+  @Type(() => MarketplaceTimingDto)
+  timings?: MarketplaceTimingDto[];
 
   @IsOptional()
   @IsString()
@@ -134,9 +134,9 @@ export class CreateBusinessDto {
   accepts_cod?: boolean;
 }
 
-export class UpdateBusinessDto extends PartialType(CreateBusinessDto) {}
+export class UpdateMarketplaceDto extends PartialType(CreateMarketplaceDto) {}
 
-export class ListBusinessesQueryDto extends PaginationQueryDto {
+export class ListMarketplacesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(80)

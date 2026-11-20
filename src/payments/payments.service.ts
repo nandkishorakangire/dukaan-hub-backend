@@ -28,7 +28,7 @@ export class PaymentsService {
     if (
       !isAdmin(user) &&
       order.buyer_id !== user.id &&
-      order.business.owner_id !== user.id
+      order.marketplace.owner_id !== user.id
     ) {
       throw new ForbiddenException('You do not have access to this order');
     }
@@ -57,7 +57,7 @@ export class PaymentsService {
       );
     }
 
-    if (provider === PaymentProvider.cod && order.business.accepts_cod === false) {
+    if (provider === PaymentProvider.cod && order.marketplace.accepts_cod === false) {
       throw new BadRequestException('This store does not accept cash on delivery');
     }
 
@@ -85,7 +85,7 @@ export class PaymentsService {
       currency: order.currency,
       upi_uri:
         provider === PaymentProvider.upi
-          ? this.buildUpiUri(order, order.business.upi_id ?? 'dukaanhub@upi')
+          ? this.buildUpiUri(order, order.marketplace.upi_id ?? 'dukaanhub@upi')
           : undefined,
     };
   }
@@ -189,7 +189,7 @@ export class PaymentsService {
 
   async confirm(orderId: string, user: AuthenticatedUser, dto: ConfirmPaymentDto) {
     const order = await this.orders.findOrder(orderId);
-    const isSeller = isAdmin(user) || order.business.owner_id === user.id;
+    const isSeller = isAdmin(user) || order.marketplace.owner_id === user.id;
     const isBuyer = order.buyer_id === user.id;
     if (!isSeller && !isBuyer) {
       throw new ForbiddenException('You do not have access to this order');
@@ -326,7 +326,7 @@ export class PaymentsService {
   private buildUpiUri(order: OrderWithRelations, payee: string): string {
     const params = new URLSearchParams({
       pa: payee,
-      pn: order.business.name,
+      pn: order.marketplace.name,
       am: Number(order.total).toFixed(2),
       cu: order.currency,
       tn: `Order ${order.order_number}`,

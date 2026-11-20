@@ -26,7 +26,7 @@ const DEMO_CAROUSEL_VIDEOS = {
   homeTour: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
 };
 
-/** Kept only on Sharma Kirana Store's business carousel; stored in the DB. */
+/** Kept only on Sharma Kirana Store's marketplace carousel; stored in the DB. */
 const SHARMA_KIRANA_VIDEO = DEMO_CAROUSEL_VIDEOS.storeTour;
 
 type ProductSeed = {
@@ -42,7 +42,7 @@ type ProductSeed = {
   category?: string;
 };
 
-type BusinessSeed = {
+type MarketplaceSeed = {
   slug: string;
   ownerEmail: string;
   name: string;
@@ -293,7 +293,7 @@ const CATEGORIES: {
   },
 ];
 
-const BUSINESSES: BusinessSeed[] = [
+const MARKETPLACES: MarketplaceSeed[] = [
   {
     slug: 'sharma-kirana',
     ownerEmail: 'seller@dukaanhub.local',
@@ -680,65 +680,65 @@ async function seed(): Promise<void> {
     }
   }
 
-  const businesses = new Map<string, { id: string; ownerId: string }>();
+  const marketplaces = new Map<string, { id: string; ownerId: string }>();
   const products = new Map<string, string>();
-  for (const seedBusiness of BUSINESSES) {
-    const ownerId = users.get(seedBusiness.ownerEmail);
-    if (!ownerId) throw new Error(`Missing owner ${seedBusiness.ownerEmail}`);
+  for (const seedMarketplace of MARKETPLACES) {
+    const ownerId = users.get(seedMarketplace.ownerEmail);
+    if (!ownerId) throw new Error(`Missing owner ${seedMarketplace.ownerEmail}`);
 
     const data = {
       owner_id: ownerId,
-      name: seedBusiness.name,
-      description: seedBusiness.description,
-      logo_url: seedBusiness.logo_url,
-      banner_url: seedBusiness.banner_url,
-      images: seedBusiness.images,
-      videos: seedBusiness.videos ?? [],
-      video_orientations: seedBusiness.video_orientations ?? [],
-      amenities: seedBusiness.amenities,
-      category: seedBusiness.category,
-      address: seedBusiness.address,
-      phone: seedBusiness.phone,
-      timings: seedBusiness.timings,
-      rating: seedBusiness.rating,
-      ratings_count: seedBusiness.ratings_count,
-      trend_score: seedBusiness.trend_score,
-      is_featured: seedBusiness.is_featured,
-      upi_id: seedBusiness.upi_id ?? null,
-      payment_qr_url: seedBusiness.payment_qr_url ?? null,
-      accepts_internal_payments: seedBusiness.accepts_internal_payments,
+      name: seedMarketplace.name,
+      description: seedMarketplace.description,
+      logo_url: seedMarketplace.logo_url,
+      banner_url: seedMarketplace.banner_url,
+      images: seedMarketplace.images,
+      videos: seedMarketplace.videos ?? [],
+      video_orientations: seedMarketplace.video_orientations ?? [],
+      amenities: seedMarketplace.amenities,
+      category: seedMarketplace.category,
+      address: seedMarketplace.address,
+      phone: seedMarketplace.phone,
+      timings: seedMarketplace.timings,
+      rating: seedMarketplace.rating,
+      ratings_count: seedMarketplace.ratings_count,
+      trend_score: seedMarketplace.trend_score,
+      is_featured: seedMarketplace.is_featured,
+      upi_id: seedMarketplace.upi_id ?? null,
+      payment_qr_url: seedMarketplace.payment_qr_url ?? null,
+      accepts_internal_payments: seedMarketplace.accepts_internal_payments,
     };
 
-    const business = await prisma.business.upsert({
-      where: { slug: seedBusiness.slug },
+    const marketplace = await prisma.marketplace.upsert({
+      where: { slug: seedMarketplace.slug },
       update: data,
-      create: { slug: seedBusiness.slug, ...data },
+      create: { slug: seedMarketplace.slug, ...data },
     });
-    businesses.set(seedBusiness.slug, { id: business.id, ownerId });
+    marketplaces.set(seedMarketplace.slug, { id: marketplace.id, ownerId });
 
-    await prisma.businessPage.upsert({
-      where: { business_id_slug: { business_id: business.id, slug: 'about-us' } },
+    await prisma.marketplacePage.upsert({
+      where: { marketplace_id_slug: { marketplace_id: marketplace.id, slug: 'about-us' } },
       update: {
         title: 'About Us',
-        content: `${seedBusiness.name} has been serving customers in ${seedBusiness.address}.`,
-        images: [seedBusiness.banner_url],
+        content: `${seedMarketplace.name} has been serving customers in ${seedMarketplace.address}.`,
+        images: [seedMarketplace.banner_url],
         is_published: true,
       },
       create: {
-        business_id: business.id,
+        marketplace_id: marketplace.id,
         title: 'About Us',
         slug: 'about-us',
-        content: `${seedBusiness.name} has been serving customers in ${seedBusiness.address}.`,
-        images: [seedBusiness.banner_url],
+        content: `${seedMarketplace.name} has been serving customers in ${seedMarketplace.address}.`,
+        images: [seedMarketplace.banner_url],
         is_published: true,
       },
     });
 
-    await prisma.businessPage.upsert({
-      where: { business_id_slug: { business_id: business.id, slug: 'returns' } },
+    await prisma.marketplacePage.upsert({
+      where: { marketplace_id_slug: { marketplace_id: marketplace.id, slug: 'returns' } },
       update: { title: 'Returns & Refunds', content: 'Contact the store within 24 hours for issues.', is_published: true },
       create: {
-        business_id: business.id,
+        marketplace_id: marketplace.id,
         title: 'Returns & Refunds',
         slug: 'returns',
         content: 'Contact the store within 24 hours for issues.',
@@ -746,13 +746,13 @@ async function seed(): Promise<void> {
       },
     });
 
-    for (const seedProduct of seedBusiness.products) {
+    for (const seedProduct of seedMarketplace.products) {
       const existing = await prisma.product.findFirst({
-        where: { business_id: business.id, name: seedProduct.name },
+        where: { marketplace_id: marketplace.id, name: seedProduct.name },
         select: { id: true },
       });
       const productData = {
-        business_id: business.id,
+        marketplace_id: marketplace.id,
         name: seedProduct.name,
         description: seedProduct.description ?? null,
         price: seedProduct.price,
@@ -769,7 +769,7 @@ async function seed(): Promise<void> {
       const product = existing
         ? await prisma.product.update({ where: { id: existing.id }, data: productData })
         : await prisma.product.create({ data: productData });
-      products.set(`${seedBusiness.slug}:${seedProduct.name}`, product.id);
+      products.set(`${seedMarketplace.slug}:${seedProduct.name}`, product.id);
     }
   }
 
@@ -799,13 +799,13 @@ async function seed(): Promise<void> {
   }
 
   const ads: {
-    businessSlug?: string;
+    marketplaceSlug?: string;
     title: string;
     media_url: string;
     media_urls?: string[];
     media_type: AdMediaType;
     poster_url?: string;
-    poster_urls?: string[];
+    thumbnail_urls?: string[];
     video_orientation?: 'landscape' | 'portrait';
     link_url?: string;
     sort_order: number;
@@ -816,7 +816,7 @@ async function seed(): Promise<void> {
     muted?: boolean;
   }[] = [
     {
-      businessSlug: 'sharma-kirana',
+      marketplaceSlug: 'sharma-kirana',
       title: 'Fresh groceries in 30 minutes',
       media_url: DEMO_CAROUSEL_VIDEOS.storeTour,
       media_urls: [
@@ -826,13 +826,13 @@ async function seed(): Promise<void> {
       ],
       media_type: 'status_video',
       poster_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
-      poster_urls: [
+      thumbnail_urls: [
         'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
         'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
         'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
       ],
       video_orientation: 'landscape',
-      link_url: '/business/sharma-kirana',
+      link_url: '/marketplace/sharma-kirana',
       sort_order: 1,
       // Status-style ad: one play click runs all three clips in this tile.
       duration_ms: 15000,
@@ -842,13 +842,13 @@ async function seed(): Promise<void> {
       muted: false,
     },
     {
-      businessSlug: 'freshbake',
+      marketplaceSlug: 'freshbake',
       title: 'Same-day cakes & bakes',
       media_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
       media_type: 'video',
       poster_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
       video_orientation: 'landscape',
-      link_url: '/business/freshbake',
+      link_url: '/marketplace/freshbake',
       sort_order: 2,
       pausable: true,
       auto_play: true,
@@ -856,17 +856,17 @@ async function seed(): Promise<void> {
       muted: true,
     },
     {
-      businessSlug: 'techzone',
+      marketplaceSlug: 'techzone',
       title: 'Latest audio deals',
       media_url: DEMO_CAROUSEL_VIDEOS.dealReel,
       media_type: 'video',
       poster_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
       video_orientation: 'landscape',
-      link_url: '/business/techzone',
+      link_url: '/marketplace/techzone',
       sort_order: 3,
     },
     {
-      businessSlug: 'freshbake',
+      marketplaceSlug: 'freshbake',
       title: 'Freshly baked today',
       media_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800',
       media_urls: [
@@ -875,7 +875,7 @@ async function seed(): Promise<void> {
         'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
       ],
       media_type: 'status_image',
-      link_url: '/business/freshbake',
+      link_url: '/marketplace/freshbake',
       sort_order: 4,
       // Status photos: one play click runs all three photos in this tile.
       duration_ms: 5000,
@@ -885,11 +885,11 @@ async function seed(): Promise<void> {
       muted: true,
     },
     {
-      businessSlug: 'sharma-kirana',
+      marketplaceSlug: 'sharma-kirana',
       title: 'Everyday essentials',
       media_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
       media_type: 'image',
-      link_url: '/business/sharma-kirana',
+      link_url: '/marketplace/sharma-kirana',
       sort_order: 5,
       pausable: true,
       auto_play: true,
@@ -901,25 +901,25 @@ async function seed(): Promise<void> {
   const now = new Date();
   const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   for (const ad of ads) {
-    const business = ad.businessSlug ? businesses.get(ad.businessSlug) : undefined;
+    const marketplace = ad.marketplaceSlug ? marketplaces.get(ad.marketplaceSlug) : undefined;
     const existing = await prisma.ad.findFirst({
-      where: { title: ad.title, business_id: business?.id ?? null },
+      where: { title: ad.title, marketplace_id: marketplace?.id ?? null },
       select: { id: true },
     });
-    // Demo link URLs use the business slug in the seed; store the id so the
-    // client can open /business/[id] directly.
+    // Demo link URLs use the marketplace slug in the seed; store the id so the
+    // client can open /marketplace/[id] directly.
     const linkUrl =
-      ad.link_url && business
-        ? ad.link_url.replace(/\/business\/[^/]+$/, `/business/${business.id}`)
+      ad.link_url && marketplace
+        ? ad.link_url.replace(/\/marketplace\/[^/]+$/, `/marketplace/${marketplace.id}`)
         : ad.link_url ?? null;
     const data = {
-      business_id: business?.id ?? null,
+      marketplace_id: marketplace?.id ?? null,
       title: ad.title,
       media_url: ad.media_url,
       media_urls: ad.media_urls ?? [ad.media_url],
       media_type: ad.media_type,
       poster_url: ad.poster_url ?? null,
-      poster_urls: ad.poster_urls ?? (ad.poster_url ? [ad.poster_url] : []),
+      thumbnail_urls: ad.thumbnail_urls ?? (ad.poster_url ? [ad.poster_url] : []),
       video_orientation: ad.video_orientation ?? null,
       link_url: linkUrl,
       sort_order: ad.sort_order,
@@ -946,8 +946,8 @@ async function seed(): Promise<void> {
   const buyerId = users.get('buyer@dukaanhub.local');
   if (!buyerId) throw new Error('Missing demo buyer');
 
-  const kirana = businesses.get('sharma-kirana');
-  const bakery = businesses.get('freshbake');
+  const kirana = marketplaces.get('sharma-kirana');
+  const bakery = marketplaces.get('freshbake');
   const riceId = products.get('sharma-kirana:Basmati Rice 5kg');
   const cakeId = products.get('freshbake:Chocolate Cake 1kg');
 
@@ -958,7 +958,7 @@ async function seed(): Promise<void> {
         data: {
           order_number: 'DH-2026-0001',
           buyer_id: buyerId,
-          business_id: kirana.id,
+          marketplace_id: kirana.id,
           subtotal: 420,
           discount: 0,
           delivery_fee: 0,
@@ -1012,7 +1012,7 @@ async function seed(): Promise<void> {
         data: {
           order_number: 'DH-2026-0002',
           buyer_id: buyerId,
-          business_id: bakery.id,
+          marketplace_id: bakery.id,
           subtotal: 650,
           discount: 0,
           delivery_fee: 0,

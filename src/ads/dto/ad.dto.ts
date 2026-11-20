@@ -22,7 +22,7 @@ export class CreateAdDto {
   /** Omit for a platform-wide ad (admin only). */
   @IsOptional()
   @IsUUID()
-  business_id?: string;
+  marketplace_id?: string;
 
   @IsString()
   @MaxLength(140)
@@ -46,19 +46,19 @@ export class CreateAdDto {
   @IsEnum(AdMediaType)
   media_type?: AdMediaType;
 
-  /** Still shown under the first video while it loads. */
+  /** Single front-facing carousel image for this ad. */
   @IsOptional()
   @IsUrl({ require_tld: false })
   @MaxLength(2048)
   poster_url?: string;
 
-  /** Poster for each media_urls item, in the same order. */
+  /** Thumbnails for media_urls items, in the same order; used by the player. */
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)
   @IsUrl({ require_tld: false }, { each: true })
   @MaxLength(2048, { each: true })
-  poster_urls?: string[];
+  thumbnail_urls?: string[];
 
   /** Landscape/portrait hint for fullscreen. Probed from the video when omitted. */
   @IsOptional()
@@ -112,12 +112,12 @@ export class CreateAdDto {
   is_active?: boolean;
 }
 
-export class UpdateAdDto extends PartialType(OmitType(CreateAdDto, ['business_id'] as const)) {}
+export class UpdateAdDto extends PartialType(OmitType(CreateAdDto, ['marketplace_id'] as const)) {}
 
 export class ListAdsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
-  business_id?: string;
+  marketplace_id?: string;
 
   @IsOptional()
   @Transform(({ value }) => {

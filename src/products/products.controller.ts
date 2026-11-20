@@ -27,35 +27,35 @@ export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
   @Public()
-  @Get('businesses/:business_id/products')
+  @Get('marketplaces/:marketplace_id/products')
   @ApiOperation({ summary: 'List active products for a storefront' })
   list(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @Query() query: ListProductsQueryDto,
   ) {
-    return this.products.listForBusiness(businessId, query);
+    return this.products.listForMarketplace(marketplaceId, query);
   }
 
-  @Get('businesses/:business_id/products/manage')
+  @Get('marketplaces/:marketplace_id/products/manage')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all products for a storefront (owner/admin)' })
   manage(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: ListProductsQueryDto,
   ) {
-    return this.products.listAllForOwner(businessId, user, query);
+    return this.products.listAllForOwner(marketplaceId, user, query);
   }
 
-  @Post('businesses/:business_id/products')
+  @Post('marketplaces/:marketplace_id/products')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a product (owner/admin)' })
   create(
-    @Param('business_id', ParseUUIDPipe) businessId: string,
+    @Param('marketplace_id', ParseUUIDPipe) marketplaceId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateProductDto,
   ) {
-    return this.products.create(businessId, user, dto);
+    return this.products.create(marketplaceId, user, dto);
   }
 
   @Public()

@@ -120,12 +120,12 @@ call `/auth/verification/request` and `/auth/verification/verify` with
 `purpose: "email-change"`, then `POST /users/me/email-change` with
 `{ email, verification_token }`. An admin still has to approve the request.
 
-### Businesses (`/businesses`)
+### Marketplaces (`/marketplaces`)
 
-`GET /businesses` (search, category, featured, sort), `GET /businesses/trending`,
-`GET /businesses/mine`, `GET /businesses/slug/:slug`, `GET /businesses/:id`,
-`POST /businesses` (promotes buyer → seller), `PATCH /businesses/:id`,
-`DELETE /businesses/:id` (owner/admin).
+`GET /marketplaces` (search, category, featured, sort), `GET /marketplaces/trending`,
+`GET /marketplaces/mine`, `GET /marketplaces/slug/:slug`, `GET /marketplaces/:id`,
+`POST /marketplaces` (promotes buyer → seller), `PATCH /marketplaces/:id`,
+`DELETE /marketplaces/:id` (owner/admin).
 
 ### Categories (`/categories`)
 
@@ -133,14 +133,14 @@ call `/auth/verification/request` and `/auth/verification/verify` with
 
 ### Products
 
-`GET /businesses/:business_id/products`, `GET /products/:id`,
-`GET /businesses/:business_id/products/manage`, `POST /businesses/:business_id/products`,
+`GET /marketplaces/:marketplace_id/products`, `GET /products/:id`,
+`GET /marketplaces/:marketplace_id/products/manage`, `POST /marketplaces/:marketplace_id/products`,
 `PATCH /products/:id`, `PATCH /products/:id/stock`, `DELETE /products/:id`.
 
 ### Orders (`/orders`)
 
 `POST /orders` (prices and totals are computed server-side), `GET /orders`
-(buyer's orders), `GET /orders/seller` (orders across the seller's businesses),
+(buyer's orders), `GET /orders/seller` (orders across the seller's marketplaces),
 `GET /orders/:id`, `PATCH /orders/:id/status`, `POST /orders/:id/cancel`.
 
 Status flow: `pending → confirmed → processing → shipped → delivered`, with
@@ -167,19 +167,19 @@ are broadcast over Socket.IO and as notifications.
 
 ### Pages (`/pages`)
 
-Public: `GET /businesses/:business_id/pages`,
-`GET /businesses/:business_id/pages/:slug`.
+Public: `GET /marketplaces/:marketplace_id/pages`,
+`GET /marketplaces/:marketplace_id/pages/:slug`.
 
-Owner/admin: `GET /businesses/:business_id/pages/manage`,
-`POST /businesses/:business_id/pages`, `GET /pages/:id`, `PATCH /pages/:id`,
+Owner/admin: `GET /marketplaces/:marketplace_id/pages/manage`,
+`POST /marketplaces/:marketplace_id/pages`, `GET /pages/:id`, `PATCH /pages/:id`,
 `DELETE /pages/:id`.
 
 ### Ads (`/ads`)
 
-Public: `GET /ads?placement=home|business|search|carousel`, `GET /ads/:id`.
+Public: `GET /ads?placement=home|marketplace|search|carousel`, `GET /ads/:id`.
 Owner/admin: `GET /ads/mine`, `POST /ads`, `PATCH /ads/:id`, `DELETE /ads/:id`.
-Storefront owners can only manage ads for their own business; only admins can
-create platform-wide ads (no `business_id`).
+Storefront owners can only manage ads for their own marketplace; only admins can
+create platform-wide ads (no `marketplace_id`).
 
 ### Uploads (`/uploads`)
 
@@ -201,19 +201,19 @@ Connect to the server root with an optional access token:
 io('http://localhost:4000', { auth: { token: accessToken } });
 ```
 
-Rooms: `user:<id>`, `business:<id>`, `order:<id>` and `public`.
+Rooms: `user:<id>`, `marketplace:<id>`, `order:<id>` and `public`.
 
-Client → server: `business:join`, `business:leave`, `order:join`, `order:leave`,
+Client → server: `marketplace:join`, `marketplace:leave`, `order:join`, `order:leave`,
 `chat:typing`.
 
-Server → client: `order:update`, `business:update`, `product:stock`,
+Server → client: `order:update`, `marketplace:update`, `product:stock`,
 `notification:new`, `chat:message`, `chat:typing`, `authenticated`.
 
 ## Data model
 
 Prisma models live in [`prisma/schema.prisma`](./prisma/schema.prisma):
-`User`, `RefreshToken`, `Business`, `Category`, `Product`, `Order`, `OrderItem`,
-`Payment`, `ChatMessage`, `BusinessPage`, `Ad`, `Coupon`.
+`User`, `RefreshToken`, `Marketplace`, `Category`, `Product`, `Order`, `OrderItem`,
+`Payment`, `ChatMessage`, `MarketplacePage`, `Ad`, `Coupon`.
 
 Money is stored as `Decimal(12, 2)` and serialized to plain numbers in API
 responses. Prices and order totals are always calculated on the server.

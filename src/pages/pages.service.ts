@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BusinessPage, Prisma } from '@prisma/client';
-import { BusinessesService } from '../businesses/businesses.service';
+import { MarketplacePage, Prisma } from '@prisma/client';
+import { MarketplacesService } from '../marketplaces/marketplaces.service';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { uniqueSlug } from '../common/utils/slug';
@@ -11,16 +11,16 @@ import { CreatePageDto, ListPagesQueryDto, UpdatePageDto } from './dto/page.dto'
 export class PagesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly businesses: BusinessesService,
+    private readonly marketplaces: MarketplacesService,
   ) {}
 
-  async listForBusiness(
-    businessId: string,
+  async listForMarketplace(
+    marketplaceId: string,
     query: ListPagesQueryDto,
     publishedOnly = true,
-  ): Promise<PaginatedResult<BusinessPage>> {
-    const where: Prisma.BusinessPageWhereInput = {
-      business_id: businessId,
+  ): Promise<PaginatedResult<MarketplacePage>> {
+    const where: Prisma.MarketplacePageWhereInput = {
+      marketplace_id: marketplaceId,
       ...(publishedOnly
         ? { is_published: true }
         : query.published !== undefined
@@ -29,13 +29,13 @@ export class PagesService {
     };
 
     const [data, total] = await this.prisma.$transaction([
-      this.prisma.businessPage.findMany({
+      this.prisma.marketplacePage.findMany({
         where,
         orderBy: [{ is_published: 'desc' }, { created_at: 'desc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
-      this.prisma.businessPage.count({ where }),
+      this.prisma.marketplacePage.count({ where }),
     ]);
 
     return paginate(data, total, query.page, query.limit);
@@ -43,48 +43,48 @@ export class PagesService {
 
   /** Owner-only listing that includes drafts. */
   async listForOwner(
-    businessId: string,
+    marketplaceId: string,
     user: AuthenticatedUser,
     query: ListPagesQueryDto,
-  ): Promise<PaginatedResult<BusinessPage>> {
-    await this.businesses.assertOwned(businessId, user);
-    return this.listForBusiness(businessId, query, false);
+  ): Promise<PaginatedResult<MarketplacePage>> {
+    await this.marketplaces.assertOwned(marketplaceId, user);
+    return this.listForMarketplace(marketplaceId, query, false);
   }
 
-  async getPublishedBySlug(businessId: string, slug: string): Promise<BusinessPage> {
-    const page = await this.prisma.businessPage.findFirst({
-      where: { business_id: businessId, slug, is_published: true },
+  async getPublishedBySlug(marketplaceId: string, slug: string): Promise<MarketplacePage> {
+    const page = await this.prisma.marketplacePage.findFirst({
+      where: { marketplace_id: marketplaceId, slug, is_published: true },
     });
     if (!page) throw new NotFoundException('Page not found');
     return page;
   }
 
-  async getById(id: string): Promise<BusinessPage> {
-    const page = await this.prisma.businessPage.findUnique({ where: { id } });
+  async getById(id: string): Promise<MarketplacePage> {
+    const page = await this.prisma.marketplacePage.findUnique({ where: { id } });
     if (!page) throw new NotFoundException('Page not found');
     return page;
   }
 
-  async getForOwner(id: string, user: AuthenticatedUser): Promise<BusinessPage> {
+  async getForOwner(id: string, user: AuthenticatedUser): Promise<MarketplacePage> {
     const page = await this.getById(id);
-    await this.businesses.assertOwned(page.business_id, user);
+    await this.marketplaces.assertOwned(page.marketplace_id, user);
     return page;
   }
 
   async create(
-    businessId: string,
+    marketplaceId: string,
     user: AuthenticatedUser,
     dto: CreatePageDto,
-  ): Promise<BusinessPage> {
-    await this.businesses.assertOwned(businessId, user);
+  ): Promise<MarketplacePage> {
+    await this.marketplaces.assertOwned(marketplaceId, user);
 
     const slug = await uniqueSlug(dto.slug ?? dto.title, (candidate) =>
-      this.slugExists(businessId, candidate),
+      this.slugExists(marketplaceId, candidate),
     );
 
-    return this.prisma.businessPage.create({
+    return this.prisma.marketplacePage.create({
       data: {
-        business_id: businessId,
+        marketplace_id: marketplaceId,
         title: dto.title.trim(),
         slug,
         content: dto.content,
@@ -98,18 +98,18 @@ export class PagesService {
     id: string,
     user: AuthenticatedUser,
     dto: UpdatePageDto,
-  ): Promise<BusinessPage> {
+  ): Promise<MarketplacePage> {
     const page = await this.getById(id);
-    await this.businesses.assertOwned(page.business_id, user);
+    await this.marketplaces.assertOwned(page.marketplace_id, user);
 
     let slug = page.slug;
     if (dto.slug !== undefined && dto.slug !== page.slug) {
       slug = await uniqueSlug(dto.slug, (candidate) =>
-        this.slugExists(page.business_id, candidate, id),
+        this.slugExists(page.marketplace_id, candidate, id),
       );
     }
 
-    return this.prisma.businessPage.update({
+    return this.prisma.marketplacePage.update({
       where: { id },
       data: {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
@@ -123,19 +123,19 @@ export class PagesService {
 
   async remove(id: string, user: AuthenticatedUser): Promise<{ success: true }> {
     const page = await this.getById(id);
-    await this.businesses.assertOwned(page.business_id, user);
-    await this.prisma.businessPage.delete({ where: { id } });
+    await this.marketplaces.assertOwned(page.marketplace_id, user);
+    await this.prisma.marketplacePage.delete({ where: { id } });
     return { success: true };
   }
 
   private async slugExists(
-    businessId: string,
+    marketplaceId: string,
     candidate: string,
     excludeId?: string,
   ): Promise<boolean> {
-    const existing = await this.prisma.businessPage.findFirst({
+    const existing = await this.prisma.marketplacePage.findFirst({
       where: {
-        business_id: businessId,
+        marketplace_id: marketplaceId,
         slug: candidate,
         ...(excludeId ? { NOT: { id: excludeId } } : {}),
       },
