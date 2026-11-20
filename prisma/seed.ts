@@ -1,4 +1,5 @@
 import {
+  AdMediaType,
   CouponType,
   OrderStatus,
   PaymentMode,
@@ -800,8 +801,11 @@ async function seed(): Promise<void> {
   const ads: {
     businessSlug?: string;
     title: string;
-    image_url: string;
-    video_url?: string;
+    media_url: string;
+    media_urls?: string[];
+    media_type: AdMediaType;
+    poster_url?: string;
+    poster_urls?: string[];
     video_orientation?: 'landscape' | 'portrait';
     link_url?: string;
     sort_order: number;
@@ -814,12 +818,23 @@ async function seed(): Promise<void> {
     {
       businessSlug: 'sharma-kirana',
       title: 'Fresh groceries in 30 minutes',
-      image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
-      video_url: DEMO_CAROUSEL_VIDEOS.storeTour,
+      media_url: DEMO_CAROUSEL_VIDEOS.storeTour,
+      media_urls: [
+        DEMO_CAROUSEL_VIDEOS.storeTour,
+        DEMO_CAROUSEL_VIDEOS.bakeryPick,
+        DEMO_CAROUSEL_VIDEOS.dealReel,
+      ],
+      media_type: 'status_video',
+      poster_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+      poster_urls: [
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+        'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
+        'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
+      ],
       video_orientation: 'landscape',
       link_url: '/business/sharma-kirana',
       sort_order: 1,
-      // Status-style ad: starts paused each visit, audio on, no mute button.
+      // Status-style ad: one play click runs all three clips in this tile.
       duration_ms: 15000,
       pausable: true,
       auto_play: false,
@@ -829,8 +844,9 @@ async function seed(): Promise<void> {
     {
       businessSlug: 'freshbake',
       title: 'Same-day cakes & bakes',
-      image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
-      video_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
+      media_url: DEMO_CAROUSEL_VIDEOS.bakeryPick,
+      media_type: 'video',
+      poster_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
       video_orientation: 'landscape',
       link_url: '/business/freshbake',
       sort_order: 2,
@@ -842,11 +858,43 @@ async function seed(): Promise<void> {
     {
       businessSlug: 'techzone',
       title: 'Latest audio deals',
-      image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
-      video_url: DEMO_CAROUSEL_VIDEOS.dealReel,
+      media_url: DEMO_CAROUSEL_VIDEOS.dealReel,
+      media_type: 'video',
+      poster_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800',
       video_orientation: 'landscape',
       link_url: '/business/techzone',
       sort_order: 3,
+    },
+    {
+      businessSlug: 'freshbake',
+      title: 'Freshly baked today',
+      media_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800',
+      media_urls: [
+        'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800',
+        'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800',
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+      ],
+      media_type: 'status_image',
+      link_url: '/business/freshbake',
+      sort_order: 4,
+      // Status photos: one play click runs all three photos in this tile.
+      duration_ms: 5000,
+      pausable: true,
+      auto_play: false,
+      show_sound_control: false,
+      muted: true,
+    },
+    {
+      businessSlug: 'sharma-kirana',
+      title: 'Everyday essentials',
+      media_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+      media_type: 'image',
+      link_url: '/business/sharma-kirana',
+      sort_order: 5,
+      pausable: true,
+      auto_play: true,
+      show_sound_control: false,
+      muted: true,
     },
   ];
 
@@ -867,14 +915,20 @@ async function seed(): Promise<void> {
     const data = {
       business_id: business?.id ?? null,
       title: ad.title,
-      image_url: ad.image_url,
-      video_url: ad.video_url ?? null,
+      media_url: ad.media_url,
+      media_urls: ad.media_urls ?? [ad.media_url],
+      media_type: ad.media_type,
+      poster_url: ad.poster_url ?? null,
+      poster_urls: ad.poster_urls ?? (ad.poster_url ? [ad.poster_url] : []),
       video_orientation: ad.video_orientation ?? null,
       link_url: linkUrl,
       sort_order: ad.sort_order,
       duration_ms: ad.duration_ms ?? null,
       pausable: ad.pausable ?? true,
-      auto_play: ad.auto_play ?? true,
+      auto_play:
+        ad.media_type === 'status_image' || ad.media_type === 'status_video'
+          ? false
+          : (ad.auto_play ?? true),
       show_sound_control: ad.show_sound_control ?? true,
       muted: ad.muted ?? true,
       starts_at: now,

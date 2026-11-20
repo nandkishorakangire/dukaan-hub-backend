@@ -1,8 +1,12 @@
+import { AdMediaType } from '@prisma/client';
 import { PartialType, OmitType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -24,15 +28,37 @@ export class CreateAdDto {
   @MaxLength(140)
   title: string;
 
+  /** Primary media item. For status ads this is also the first media_urls item. */
   @IsUrl({ require_tld: false })
   @MaxLength(2048)
-  image_url: string;
+  media_url: string;
 
-  /** Optional carousel video. The image_url is used as its poster. */
+  /** Ordered media items for a status ad; the first item is also media_url. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUrl({ require_tld: false }, { each: true })
+  @MaxLength(2048, { each: true })
+  media_urls?: string[];
+
+  /** Media kind. Status ads wait for play and run their list inside one tile. */
+  @IsOptional()
+  @IsEnum(AdMediaType)
+  media_type?: AdMediaType;
+
+  /** Still shown under the first video while it loads. */
   @IsOptional()
   @IsUrl({ require_tld: false })
   @MaxLength(2048)
-  video_url?: string;
+  poster_url?: string;
+
+  /** Poster for each media_urls item, in the same order. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUrl({ require_tld: false }, { each: true })
+  @MaxLength(2048, { each: true })
+  poster_urls?: string[];
 
   /** Landscape/portrait hint for fullscreen. Probed from the video when omitted. */
   @IsOptional()
@@ -50,7 +76,7 @@ export class CreateAdDto {
   @Min(0)
   sort_order?: number;
 
-  /** Status-style fallback timer for an image or a video awaiting first tap. */
+  /** Per-item timer for image media; video fallback uses the carousel default. */
   @IsOptional()
   @Type(() => Number)
   @IsInt()

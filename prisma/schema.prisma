@@ -73,6 +73,15 @@ enum CouponType {
   flat
 }
 
+/// Media kind. Status ads play their ordered media list one item at a time
+/// inside one carousel tile; plain ads use a single item.
+enum AdMediaType {
+  image
+  status_image
+  video
+  status_video
+}
+
 model User {
   id             String   @id @default(uuid()) @db.Uuid
   name           String
@@ -443,8 +452,15 @@ model Ad {
   id                 String      @id @default(uuid()) @db.Uuid
   business_id        String?     @db.Uuid
   title              String
-  image_url          String
-  video_url          String?
+  /// First/primary media item. For status ads this is also media_urls[0].
+  media_url          String
+  /// Ordered media items for a status ad; plain ads keep a one-item list.
+  media_urls         String[]    @default([])
+  media_type         AdMediaType @default(image)
+  /// Still shown under a video while it loads. Unused for image ads.
+  poster_url         String?
+  /// Poster for each media_urls item, in the same order.
+  poster_urls        String[]    @default([])
   /// 'landscape' | 'portrait'; probed from the video when left unset.
   video_orientation  String?
   link_url           String?

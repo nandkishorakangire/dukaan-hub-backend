@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AdMediaType, Prisma } from '@prisma/client';
 import { BusinessesService } from '../businesses/businesses.service';
 import { paginate, PaginatedResult } from '../common/dto/pagination.dto';
 import { AuthenticatedUser, isAdmin } from '../common/types/authenticated-user';
@@ -17,6 +17,26 @@ const adInclude = {
 } satisfies Prisma.AdInclude;
 
 export type AdWithBusiness = Prisma.AdGetPayload<{ include: typeof adInclude }>;
+
+const isVideoMedia = (type: AdMediaType) => type === 'video' || type === 'status_video';
+const isStatusMedia = (type: AdMediaType) =>
+  type === 'status_image' || type === 'status_video';
+
+/** Keep media_url/posters aligned with the first item of the ordered lists. */
+function resolveMediaLists(
+  mediaUrl: string,
+  mediaUrls: string[] | undefined,
+  posterUrl: string | null | undefined,
+  posterUrls: string[] | undefined,
+) {
+  const urls = mediaUrls?.length ? mediaUrls : [mediaUrl];
+  const posters = posterUrls?.length
+    ? posterUrls
+    : posterUrl
+      ? [posterUrl]
+      : [];
+  return { urls, posters, primary: urls[0] ?? mediaUrl };
+}
 
 @Injectable()
 export class AdsService {
@@ -69,19 +89,34 @@ export class AdsService {
 
     this.assertDateRange(dto.starts_at, dto.ends_at);
 
+    const mediaType = dto.media_type ?? 'image';
+    const video = isVideoMedia(mediaType);
+    const { urls, posters, primary } = resolveMediaLists(
+      dto.media_url,
+      dto.media_urls,
+      dto.poster_url,
+      dto.poster_urls,
+    );
+    // Both status types wait for one play click, then run their list in order.
+    const autoPlay = isStatusMedia(mediaType) ? false : (dto.auto_play ?? true);
+
     return this.prisma.ad.create({
       data: {
         business_id: dto.business_id ?? null,
         title: dto.title.trim(),
-        image_url: dto.image_url,
-        video_url: dto.video_url,
-        video_orientation:
-          dto.video_orientation ?? (await probeVideoOrientation(dto.video_url)),
+        media_url: primary,
+        media_urls: urls,
+        media_type: mediaType,
+        poster_url: posters[0] ?? null,
+        poster_urls: posters,
+        video_orientation: video
+          ? dto.video_orientation ?? (await probeVideoOrientation(primary))
+          : null,
         link_url: dto.link_url,
         sort_order: dto.sort_order ?? 0,
         duration_ms: dto.duration_ms ?? null,
         pausable: dto.pausable ?? true,
-        auto_play: dto.auto_play ?? true,
+        auto_play: autoPlay,
         show_sound_control: dto.show_sound_control ?? true,
         muted: dto.muted ?? true,
         starts_at: dto.starts_at ? new Date(dto.starts_at) : null,
@@ -104,23 +139,58 @@ export class AdsService {
       dto.ends_at ?? ad.ends_at?.toISOString(),
     );
 
-    const videoChanged = dto.video_url !== undefined && dto.video_url !== ad.video_url;
-    const probedOrientation = videoChanged ? await probeVideoOrientation(dto.video_url) : null;
+    const mediaType = dto.media_type ?? ad.media_type;
+    const video = isVideoMedia(mediaType);
+    const currentUrls = ad.media_urls?.length ? ad.media_urls : [ad.media_url];
+    const currentPosters = ad.poster_urls?.length
+      ? ad.poster_urls
+      : ad.poster_url
+        ? [ad.poster_url]
+        : [];
+    const { urls, posters, primary } = resolveMediaLists(
+      dto.media_url ?? ad.media_url,
+      dto.media_urls ?? (dto.media_url === undefined ? currentUrls : undefined),
+      dto.poster_url !== undefined ? dto.poster_url : (currentPosters[0] ?? null),
+      dto.poster_urls ?? (dto.poster_url === undefined ? currentPosters : undefined),
+    );
+    const mediaChanged =
+      primary !== ad.media_url ||
+      JSON.stringify(urls) !== JSON.stringify(currentUrls) ||
+      (dto.media_type !== undefined && dto.media_type !== ad.media_type);
+    // Probe orientation only for a video, and only when its media actually
+    // changed. Switching an ad to an image clears the now-irrelevant hint.
+    const probedOrientation =
+      mediaChanged && video ? await probeVideoOrientation(primary) : null;
     const nextOrientation =
-      dto.video_orientation ?? probedOrientation ?? (videoChanged ? null : undefined);
+      dto.video_orientation ??
+      probedOrientation ??
+      (mediaChanged && !video ? null : undefined);
+
+    // Both status types wait for one play click. Leaving one restores auto-play
+    // so a type-only edit does not keep the old tap-to-start behaviour.
+    const nextAutoPlay = isStatusMedia(mediaType)
+      ? false
+      : dto.auto_play !== undefined
+        ? dto.auto_play
+        : isStatusMedia(ad.media_type)
+          ? true
+          : undefined;
 
     return this.prisma.ad.update({
       where: { id },
       data: {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-        ...(dto.image_url !== undefined ? { image_url: dto.image_url } : {}),
-        ...(dto.video_url !== undefined ? { video_url: dto.video_url } : {}),
+        media_url: primary,
+        media_urls: urls,
+        ...(dto.media_type !== undefined ? { media_type: dto.media_type } : {}),
+        poster_url: posters[0] ?? null,
+        poster_urls: posters,
         ...(nextOrientation !== undefined ? { video_orientation: nextOrientation } : {}),
         ...(dto.link_url !== undefined ? { link_url: dto.link_url } : {}),
         ...(dto.sort_order !== undefined ? { sort_order: dto.sort_order } : {}),
         ...(dto.duration_ms !== undefined ? { duration_ms: dto.duration_ms } : {}),
         ...(dto.pausable !== undefined ? { pausable: dto.pausable } : {}),
-        ...(dto.auto_play !== undefined ? { auto_play: dto.auto_play } : {}),
+        ...(nextAutoPlay !== undefined ? { auto_play: nextAutoPlay } : {}),
         ...(dto.show_sound_control !== undefined
           ? { show_sound_control: dto.show_sound_control }
           : {}),
